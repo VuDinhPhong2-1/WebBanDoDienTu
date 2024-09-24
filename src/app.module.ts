@@ -6,6 +6,11 @@ import { RolesModule } from './roles/roles.module';
 import { AuthsModule } from './auths/auths.module';
 import { UserRolesModule } from './user-roles/user-roles.module';
 import { CategoriesModule } from './categories/categories.module';
+import { BrandsModule } from './brands/brands.module';
+import { DiscountsModule } from './discounts/discounts.module';
+import { SalePricesModule } from './sale-prices/sale-prices.module';
+import { ProductsModule } from './products/products.module';
+import { ProductCategoriesModule } from './product-categories/product-categories.module';
 
 @Module({
   imports: [
@@ -36,6 +41,11 @@ import { CategoriesModule } from './categories/categories.module';
     AuthsModule,
     UserRolesModule,
     CategoriesModule,
+    BrandsModule,
+    DiscountsModule,
+    SalePricesModule,
+    ProductsModule,
+    ProductCategoriesModule,
   ],
 })
 export class AppModule {}

@@ -18,11 +18,11 @@ export class Categories {
   @Column("bit", { name: "IsActive", nullable: true, default: () => "(1)" })
   isActive: boolean | null;
 
-  @Column("nvarchar", { name: "createdBy", nullable: true, length: 100 })
-  createdBy: string | null;
+  @Column("int", { name: "createdBy", nullable: true })
+  createdBy: number | null;
 
-  @Column("nvarchar", { name: "updatedBy", nullable: true, length: 100 })
-  updatedBy: string | null;
+  @Column("int", { name: "updatedBy", nullable: true })
+  updatedBy: number | null;
 
   @Column("datetime", {
     name: "createdAt",

@@ -1,36 +1,28 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
-@Index("PK__ProductC__3224ECEE4D928592", ["productCategoryId"], {
+@Index("PK__ProductC__3224ECCE3C3F0586", ["productCategoryId"], {
   unique: true,
 })
 @Entity("ProductCategories", { schema: "dbo" })
 export class ProductCategories {
-  @PrimaryGeneratedColumn({ type: "int", name: "ProductCategoryID" })
+  @PrimaryGeneratedColumn({ type: "int", name: "ProductCategoryId" })
   productCategoryId: number;
-
-  @Column("int", { name: "ProductID", nullable: true })
-  productId: number | null;
 
   @Column("int", { name: "CategoryID", nullable: true })
   categoryId: number | null;
 
-  @Column("nvarchar", { name: "createdBy", nullable: true, length: 100 })
-  createdBy: string | null;
+  @Column("int", { name: "ProductID", nullable: true })
+  productId: number | null;
 
-  @Column("nvarchar", { name: "updatedBy", nullable: true, length: 100 })
-  updatedBy: string | null;
+  @Column("int", { name: "createdBy", nullable: true })
+  createdBy: number | null;
 
-  @Column("datetime", {
-    name: "createdAt",
-    nullable: true,
-    default: () => "getdate()",
-  })
-  createdAt: Date | null;
+  @Column("datetime", { name: "createdDate", nullable: true })
+  createdDate: Date | null;
 
-  @Column("datetime", {
-    name: "updatedAt",
-    nullable: true,
-    default: () => "getdate()",
-  })
-  updatedAt: Date | null;
+  @Column("int", { name: "updatedBy", nullable: true })
+  updatedBy: number | null;
+
+  @Column("datetime", { name: "updatedDate", nullable: true })
+  updatedDate: Date | null;
 }

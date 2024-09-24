@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Roles } from '../entities/Roles';
+import { Users } from '../entities/Users';
 
 @Injectable()
 export class RolesService {
@@ -16,8 +17,13 @@ export class RolesService {
     private rolesRepository: Repository<Roles>,
   ) {}
 
-  async create(createRoleDto: CreateRoleDto): Promise<Roles> {
-    const role = this.rolesRepository.create(createRoleDto);
+  async create(createRoleDto: CreateRoleDto, user: Users): Promise<Roles> {
+    const role = this.rolesRepository.create({
+      ...createRoleDto,
+      createdBy: user.userId,
+      updatedBy: user.userId,
+    });
+
     try {
       return await this.rolesRepository.save(role);
     } catch (error) {

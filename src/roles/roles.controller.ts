@@ -11,20 +11,21 @@ import {
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { Roles } from '../decorators/customize';
+import { Roles, User } from '../decorators/customize';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Role } from '../enums/role.enum';
+import { Users } from '../entities/Users';
 
 @Controller('roles')
-@Roles(Role.ADMIN) // Chỉ Admin có quyền truy cập các API này
-@UseGuards(JwtAuthGuard, RolesGuard) // Dùng JWT và Roles Guard cho tất cả routes
+@Roles(Role.ADMIN)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.create(createRoleDto);
+  create(@Body() createRoleDto: CreateRoleDto, @User() user: Users) {
+    return this.rolesService.create(createRoleDto, user);
   }
 
   @Get()

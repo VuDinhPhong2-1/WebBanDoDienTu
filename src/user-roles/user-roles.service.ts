@@ -26,7 +26,7 @@ export class UserRolesService {
   async assignRoleToUser(
     userId: number,
     roleId: number,
-    createdBy?: number,
+    adminId?: number,
   ): Promise<UserRoles> {
     try {
       // Check if the user exists
@@ -45,8 +45,8 @@ export class UserRolesService {
       const userRole = this.userRolesRepository.create({
         userId,
         roleId,
-        createdBy: createdBy, // You can replace this logic for createdBy
-        updatedBy: createdBy,
+        createdBy: adminId, // You can replace this logic for createdBy
+        updatedBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

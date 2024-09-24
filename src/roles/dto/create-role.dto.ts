@@ -9,12 +9,4 @@ export class CreateRoleDto {
   @IsOptional()
   @Length(3, 255)
   description?: string;
-
-  @IsNumber()
-  @IsOptional()
-  createdBy?: number;
-
-  @IsNumber()
-  @IsOptional()
-  updatedBy?: number;
 }
