@@ -17,6 +17,7 @@ import { UpdateProductWithSalePriceAndCategoriesDto } from './dto/update-product
 import { Users } from '../entities/Users';
 import { SalePricesService } from '../sale-prices/sale-prices.service';
 import { CreateSalePriceDto } from '../sale-prices/dto/create-sale-price.dto';
+import { calculatePrices } from '../utils/price-calculation';
 
 @Injectable()
 export class ProductsService {
@@ -41,11 +42,10 @@ export class ProductsService {
 
   // Tạo mới sản phẩm với giá bán và liên kết danh mục
   async create(
-    createProductWithSalePriceAndCategoriesDto: CreateProductWithSalePriceAndCategoriesDto,
+    createProductDto: CreateProductWithSalePriceAndCategoriesDto,
     user: Users,
   ): Promise<Products> {
-    const { product, salePrice, categoryIds } =
-      createProductWithSalePriceAndCategoriesDto;
+    const { product, salePrice, categoryIds } = createProductDto;
 
     const queryRunner =
       this.productsRepository.manager.connection.createQueryRunner();
@@ -53,14 +53,25 @@ export class ProductsService {
     await queryRunner.startTransaction();
 
     try {
-      // Kiểm tra tồn tại và tính hợp lệ của các categoryId
-      if (categoryIds && categoryIds.length > 0) {
+      // Kiểm tra tồn tại và tính hợp lệ của các categoryIds
+      if (categoryIds?.length) {
         const existingCategories = await queryRunner.manager.find(Categories, {
           where: { categoryId: In(categoryIds), isActive: true },
         });
 
         if (existingCategories.length !== categoryIds.length) {
           throw new BadRequestException('Một hoặc nhiều danh mục không hợp lệ');
+        }
+      }
+
+      // Kiểm tra tính hợp lệ của discountId
+      if (product.discountId) {
+        const existingDiscount = await queryRunner.manager.findOne(Discounts, {
+          where: { discountId: product.discountId, isActive: true },
+        });
+
+        if (!existingDiscount) {
+          throw new BadRequestException('Discount ID không hợp lệ');
         }
       }
 
@@ -79,7 +90,7 @@ export class ProductsService {
       await this.salePricesService.create(newSalePrice, queryRunner);
 
       // Tạo liên kết với các danh mục
-      if (categoryIds && categoryIds.length > 0) {
+      if (categoryIds?.length) {
         const productCategories = categoryIds.map((categoryId) =>
           this.productCategoriesRepository.create({
             productId: savedProduct.productId,
@@ -103,11 +114,10 @@ export class ProductsService {
   // Cập nhật sản phẩm với giá bán và liên kết danh mục
   async update(
     productId: number,
-    updateProductWithSalePriceAndCategoriesDto: UpdateProductWithSalePriceAndCategoriesDto,
+    updateProductDto: UpdateProductWithSalePriceAndCategoriesDto,
     user: Users,
   ): Promise<Products> {
-    const { product, salePrice, categoryIds } =
-      updateProductWithSalePriceAndCategoriesDto;
+    const { product, salePrice, categoryIds } = updateProductDto;
 
     const queryRunner =
       this.productsRepository.manager.connection.createQueryRunner();
@@ -138,8 +148,8 @@ export class ProductsService {
 
       // Cập nhật liên kết danh mục nếu có
       if (categoryIds) {
-        // Kiểm tra tồn tại và tính hợp lệ của các categoryId
-        if (categoryIds.length > 0) {
+        // Kiểm tra tồn tại và tính hợp lệ của các categoryIds
+        if (categoryIds.length) {
           const existingCategories = await queryRunner.manager.find(
             Categories,
             {
@@ -158,7 +168,7 @@ export class ProductsService {
         await queryRunner.manager.delete(ProductCategories, { productId });
 
         // Tạo lại các liên kết mới
-        if (categoryIds && categoryIds.length > 0) {
+        if (categoryIds.length) {
           const productCategories = categoryIds.map((categoryId) =>
             this.productCategoriesRepository.create({
               productId: updatedProduct.productId,
@@ -182,12 +192,12 @@ export class ProductsService {
     }
   }
 
-  // Lấy tất cả sản phẩm kèm thông tin danh mục và giá
   async findAll(): Promise<any[]> {
     try {
       const products = await this.productsRepository.find();
 
       const productIds = products.map((p) => p.productId);
+
       const productCategories = await this.productCategoriesRepository.find({
         where: { productId: In(productIds) },
       });
@@ -202,26 +212,10 @@ export class ProductsService {
         categoryMap.set(category.categoryId, category);
       });
 
-      const now = new Date();
-
       const salePrices = await this.salePricesRepository.find({
         where: { productId: In(productIds) },
       });
 
-      const discounts = await this.discountsRepository.find({
-        where: {
-          discountId: In(
-            products.map((p) => p.discountId).filter((id) => id !== null),
-          ),
-        },
-      });
-
-      const discountMap = new Map<number, Discounts>();
-      discounts.forEach((discount) => {
-        discountMap.set(discount.discountId, discount);
-      });
-
-      // Tạo một map cho sale prices theo productId
       const salePriceMap = new Map<number, SalePrices[]>();
       salePrices.forEach((sp) => {
         if (!salePriceMap.has(sp.productId)) {
@@ -230,54 +224,37 @@ export class ProductsService {
         salePriceMap.get(sp.productId)?.push(sp);
       });
 
+      const discounts = await this.discountsRepository.find({
+        where: {
+          discountId: In(products.map((p) => p.discountId).filter(Boolean)),
+        },
+      });
+
+      const discountMap = new Map<number, Discounts>();
+      discounts.forEach((discount) => {
+        discountMap.set(discount.discountId, discount);
+      });
+
+      const now = new Date();
+
       const result = products.map((product) => {
-        // Lấy các sale price của sản phẩm
-        const spList = salePriceMap.get(product.productId) || [];
-
-        // Lấy giá gốc
-        const originalSalePrice = spList.reduce(
-          (prev, current) =>
-            prev.applyDate < current.applyDate ? prev : current,
-          spList[0] || { price: 0, applyDate: new Date(0) },
+        const prices = calculatePrices(
+          product,
+          salePriceMap.get(product.productId) || [],
+          discountMap,
+          now,
         );
-        const originalPrice = originalSalePrice.price;
 
-        // Lấy giá hiện tại
-        const currentSalePrice = spList
-          .filter((sp) => sp.startDate <= now && sp.endDate >= now)
-          .sort((a, b) => b.applyDate.getTime() - a.applyDate.getTime())[0];
-        const currentPrice = currentSalePrice
-          ? currentSalePrice.price
-          : originalPrice;
-
-        // Áp dụng chiết khấu nếu có
-        let discountedPrice = currentPrice;
-        if (product.discountId) {
-          const discount = discountMap.get(product.discountId);
-          if (
-            discount &&
-            discount.isActive &&
-            discount.startDate <= now &&
-            discount.endDate >= now
-          ) {
-            discountedPrice =
-              currentPrice - currentPrice * (discount.discountPercent / 100);
-          }
-        }
-
-        // Lấy các danh mục của sản phẩm
         const pcs = productCategories.filter(
           (pc) => pc.productId === product.productId,
         );
-        const productCategoriesList = pcs.map((pc) =>
-          categoryMap.get(pc.categoryId),
+        const productCategoriesList = Array.from(
+          new Set(pcs.map((pc) => categoryMap.get(pc.categoryId))),
         );
 
         return {
           ...product,
-          originalPrice,
-          currentPrice,
-          discountedPrice,
+          ...prices,
           categories: productCategoriesList,
         };
       });
@@ -300,47 +277,30 @@ export class ProductsService {
 
       const now = new Date();
 
-      // Lấy giá gốc
-      const originalSalePrice = await this.salePricesRepository.findOne({
-        where: { productId: product.productId },
-        order: { applyDate: 'ASC' },
+      // Lấy giá bán của sản phẩm
+      const salePrices = await this.salePricesRepository.find({
+        where: { productId },
       });
-      const originalPrice = originalSalePrice ? originalSalePrice.price : 0;
 
-      // Lấy giá hiện tại
-      const currentSalePrice = await this.salePricesRepository.findOne({
-        where: {
-          productId: product.productId,
-          startDate: LessThanOrEqual(now),
-          endDate: MoreThanOrEqual(now),
-        },
-        order: { applyDate: 'DESC' },
-      });
-      const currentPrice = currentSalePrice
-        ? currentSalePrice.price
-        : originalPrice;
-
-      // Áp dụng chiết khấu nếu có
-      let discountedPrice = currentPrice;
+      // Lấy thông tin chiết khấu
+      let discount: Discounts | undefined;
       if (product.discountId) {
-        const discount = await this.discountsRepository.findOne({
+        discount = await this.discountsRepository.findOne({
           where: { discountId: product.discountId },
         });
-
-        if (
-          discount &&
-          discount.isActive &&
-          discount.startDate <= now &&
-          discount.endDate >= now
-        ) {
-          discountedPrice =
-            currentPrice - currentPrice * (discount.discountPercent / 100);
-        }
       }
 
-      // Lấy các ProductCategories liên quan
+      const discountMap = new Map<number, Discounts>();
+      if (discount) {
+        discountMap.set(discount.discountId, discount);
+      }
+
+      // Tính giá cho sản phẩm
+      const prices = calculatePrices(product, salePrices, discountMap, now);
+
+      // Lấy các danh mục của sản phẩm
       const pcs = await this.productCategoriesRepository.find({
-        where: { productId: product.productId },
+        where: { productId },
       });
 
       const categoryIds = pcs.map((pc) => pc.categoryId);
@@ -350,9 +310,7 @@ export class ProductsService {
 
       return {
         ...product,
-        originalPrice,
-        currentPrice,
-        discountedPrice,
+        ...prices,
         categories,
       };
     } catch (error) {

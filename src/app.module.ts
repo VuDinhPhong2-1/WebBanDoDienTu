@@ -11,6 +11,10 @@ import { DiscountsModule } from './discounts/discounts.module';
 import { SalePricesModule } from './sale-prices/sale-prices.module';
 import { ProductsModule } from './products/products.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
+import { ShippingMethodsModule } from './shipping-methods/shipping-methods.module';
+import { OrdersModule } from './orders/orders.module';
+import { OrderDetailsModule } from './order-details/order-details.module';
 
 @Module({
   imports: [
@@ -46,6 +50,10 @@ import { ProductCategoriesModule } from './product-categories/product-categories
     SalePricesModule,
     ProductsModule,
     ProductCategoriesModule,
+    PaymentMethodsModule,
+    ShippingMethodsModule,
+    OrdersModule,
+    OrderDetailsModule,
   ],
 })
 export class AppModule {}
