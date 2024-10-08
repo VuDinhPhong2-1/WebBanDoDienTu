@@ -2,17 +2,19 @@ import { IsString, IsInt, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateCategoryDto {
   @IsOptional()
-  @IsInt({ message: 'parentCategoryId must be an integer.' })
+  @IsInt({ message: 'Mã danh mục cha phải là số nguyên.' })
   parentCategoryId?: number;
 
-  @IsString({ message: 'Category name must be a string.' })
+  @IsString({ message: 'Tên danh mục phải là chuỗi ký tự.' })
   name: string;
 
   @IsOptional()
-  @IsString({ message: 'Description must be a string.' })
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
   description?: string;
 
   @IsOptional()
-  @IsBoolean({ message: 'isActive must be a boolean (true or false).' })
+  @IsBoolean({
+    message: 'Trạng thái hoạt động phải là kiểu boolean (true hoặc false).',
+  })
   isActive?: boolean;
 }

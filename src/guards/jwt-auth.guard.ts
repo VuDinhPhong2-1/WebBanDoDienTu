@@ -13,15 +13,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
-    // Add custom authentication logic here if needed
-    // For example, you can use the reflector to read custom metadata
+    // Thêm logic xác thực tùy chỉnh ở đây nếu cần
+    // Ví dụ, bạn có thể sử dụng Reflector để đọc metadata tùy chỉnh
     return super.canActivate(context);
   }
 
   handleRequest(err, user, info) {
-    // Customize the error handling
+    // Tùy chỉnh xử lý lỗi
     if (err || !user) {
-      throw err || new UnauthorizedException();
+      throw (
+        err ||
+        new UnauthorizedException(
+          'Bạn không có quyền truy cập, vui lòng đăng nhập lại.',
+        )
+      );
     }
     return user;
   }

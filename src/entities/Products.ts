@@ -40,4 +40,7 @@ export class Products {
     default: () => "getdate()",
   })
   updatedAt: Date | null;
+
+  @Column("nvarchar", { name: "avatar_url", nullable: true, length: 255 })
+  avatarUrl: string | null;
 }

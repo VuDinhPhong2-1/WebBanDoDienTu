@@ -1,4 +1,3 @@
-// create-product-with-sale-price-and-categories.dto.ts
 import { Type } from 'class-transformer';
 import {
   ValidateNested,
@@ -19,9 +18,9 @@ export class CreateProductWithSalePriceAndCategoriesDto {
   @Type(() => CreateSalePriceDto)
   salePrice: CreateSalePriceDto;
 
-  @IsArray()
-  @ArrayNotEmpty({ message: 'Category IDs cannot be empty.' })
-  @ArrayUnique({ message: 'Category IDs must be unique.' })
-  @IsInt({ each: true, message: 'Each category ID must be an integer.' })
+  @IsArray({ message: 'Danh sách ID danh mục phải là một mảng.' })
+  @ArrayNotEmpty({ message: 'Danh sách ID danh mục không được để trống.' })
+  @ArrayUnique({ message: 'Các ID danh mục phải là duy nhất.' })
+  @IsInt({ each: true, message: 'Mỗi ID danh mục phải là một số nguyên.' })
   categoryIds: number[];
 }

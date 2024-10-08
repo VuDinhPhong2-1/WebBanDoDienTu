@@ -1,4 +1,3 @@
-// create-sale-price.dto.ts
 import {
   IsNotEmpty,
   IsOptional,
@@ -10,25 +9,25 @@ import {
 export class CreateSalePriceDto {
   @IsNumber(
     { maxDecimalPlaces: 2 },
-    { message: 'Price must be a number with up to 2 decimal places.' },
+    { message: 'Giá phải là một số và có tối đa 2 chữ số thập phân.' },
   )
-  @IsNotEmpty({ message: 'Price is required.' })
+  @IsNotEmpty({ message: 'Giá là bắt buộc.' })
   price: number;
 
-  @IsDateString({}, { message: 'Start date must be a valid date string.' })
+  @IsDateString({}, { message: 'Ngày bắt đầu phải là một chuỗi ngày hợp lệ.' })
   @IsOptional()
   startDate?: string;
 
-  @IsDateString({}, { message: 'End date must be a valid date string.' })
+  @IsDateString({}, { message: 'Ngày kết thúc phải là một chuỗi ngày hợp lệ.' })
   @IsOptional()
   endDate?: string;
 
-  @IsDateString({}, { message: 'Apply date must be a valid date string.' })
+  @IsDateString({}, { message: 'Ngày áp dụng phải là một chuỗi ngày hợp lệ.' })
   @IsOptional()
   applyDate?: string;
 
-  // Make productId optional since it will be set server-side
-  @IsInt({ message: 'Product ID must be an integer.' })
+  // Product ID không bắt buộc vì sẽ được đặt từ phía server
+  @IsInt({ message: 'Mã sản phẩm phải là một số nguyên.' })
   @IsOptional()
   productId?: number;
 }

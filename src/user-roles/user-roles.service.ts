@@ -22,30 +22,32 @@ export class UserRolesService {
     private readonly rolesRepository: Repository<Roles>,
   ) {}
 
-  // Assign a role to a user
+  // Gán một vai trò cho người dùng
   async assignRoleToUser(
     userId: number,
     roleId: number,
     adminId?: number,
   ): Promise<UserRoles> {
     try {
-      // Check if the user exists
+      // Kiểm tra xem người dùng có tồn tại hay không
       const user = await this.usersRepository.findOneBy({ userId });
       if (!user) {
-        throw new NotFoundException(`User with ID ${userId} not found`);
+        throw new NotFoundException(
+          `Không tìm thấy người dùng với ID ${userId}.`,
+        );
       }
 
-      // Check if the role exists
+      // Kiểm tra xem vai trò có tồn tại hay không
       const role = await this.rolesRepository.findOneBy({ roleId });
       if (!role) {
-        throw new NotFoundException(`Role with ID ${roleId} not found`);
+        throw new NotFoundException(`Không tìm thấy vai trò với ID ${roleId}.`);
       }
 
-      // Create a new UserRoles entry and save it
+      // Tạo mới một mục UserRoles và lưu vào cơ sở dữ liệu
       const userRole = this.userRolesRepository.create({
         userId,
         roleId,
-        createdBy: adminId, // You can replace this logic for createdBy
+        createdBy: adminId, // Bạn có thể thay đổi logic cho createdBy
         updatedBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -53,57 +55,59 @@ export class UserRolesService {
 
       return await this.userRolesRepository.save(userRole);
     } catch (error) {
-      // Handle any unexpected errors
+      // Xử lý các lỗi không mong muốn
       throw new InternalServerErrorException(
-        `Failed to assign role: ${error.message}`,
+        `Không thể gán vai trò: ${error.message}`,
       );
     }
   }
 
-  // Remove a role from a user
+  // Xóa một vai trò khỏi người dùng
   async removeRoleFromUser(userId: number, roleId: number): Promise<void> {
     try {
-      // Find the role assigned to the user
+      // Tìm vai trò được gán cho người dùng
       const userRole = await this.userRolesRepository.findOne({
         where: { userId, roleId },
       });
 
-      // If no role is found, throw an error
+      // Nếu không tìm thấy vai trò, ném ra lỗi
       if (!userRole) {
         throw new NotFoundException(
-          `Role with ID ${roleId} not assigned to user with ID ${userId}`,
+          `Vai trò với ID ${roleId} chưa được gán cho người dùng với ID ${userId}.`,
         );
       }
 
-      // Remove the role
+      // Xóa vai trò
       await this.userRolesRepository.remove(userRole);
     } catch (error) {
-      // Handle any unexpected errors
+      // Xử lý các lỗi không mong muốn
       throw new InternalServerErrorException(
-        `Failed to remove role: ${error.message}`,
+        `Không thể xóa vai trò: ${error.message}`,
       );
     }
   }
 
-  // Get all roles assigned to a specific user
+  // Lấy tất cả các vai trò được gán cho một người dùng cụ thể
   async getUserRoles(userId: number): Promise<UserRoles[]> {
     try {
-      // Find all roles associated with the user
+      // Tìm tất cả các vai trò liên kết với người dùng
       const userRoles = await this.userRolesRepository.find({
         where: { userId },
-        relations: ['role'], // Ensure to load the related role information
+        relations: ['role'], // Đảm bảo tải thông tin vai trò liên quan
       });
 
-      // If no roles are found, throw an error
+      // Nếu không tìm thấy vai trò, ném ra lỗi
       if (!userRoles || userRoles.length === 0) {
-        throw new NotFoundException(`User with ID ${userId} has no roles`);
+        throw new NotFoundException(
+          `Người dùng với ID ${userId} không có vai trò nào.`,
+        );
       }
 
       return userRoles;
     } catch (error) {
-      // Handle any unexpected errors
+      // Xử lý các lỗi không mong muốn
       throw new InternalServerErrorException(
-        `Failed to get user roles: ${error.message}`,
+        `Không thể lấy vai trò của người dùng: ${error.message}`,
       );
     }
   }

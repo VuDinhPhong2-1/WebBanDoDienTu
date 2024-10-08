@@ -27,7 +27,7 @@ export class DiscountsService {
         where: { discountId },
       });
       if (!discount) {
-        throw new NotFoundException('Discount not found');
+        throw new NotFoundException('Không tìm thấy giảm giá.');
       }
       return discount;
     } catch (error) {
@@ -46,7 +46,7 @@ export class DiscountsService {
         createdBy: user.userId,
       });
     } catch (error) {
-      throw new BadRequestException('Failed to create discount');
+      throw new BadRequestException('Không thể tạo giảm giá.');
     }
   }
 
@@ -63,7 +63,7 @@ export class DiscountsService {
         updatedBy: user.userId,
       });
     } catch (error) {
-      throw new BadRequestException('Failed to update discount');
+      throw new BadRequestException('Không thể cập nhật giảm giá.');
     }
   }
 
@@ -72,7 +72,7 @@ export class DiscountsService {
       const discount = await this.findOne(discountId);
       await this.discountsRepository.remove(discount);
     } catch (error) {
-      throw new BadRequestException('Failed to delete discount');
+      throw new BadRequestException('Không thể xóa giảm giá.');
     }
   }
 }

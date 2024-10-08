@@ -8,24 +8,24 @@ import {
 } from 'class-validator';
 
 export class SignupUserDto {
-  @IsString({ message: 'Username must be a string' })
-  @IsNotEmpty({ message: 'Username is required' })
-  @Length(3, 100, { message: 'Username must be between 3 and 100 characters' })
+  @IsString({ message: 'Tên người dùng phải là chuỗi ký tự' })
+  @IsNotEmpty({ message: 'Tên người dùng là bắt buộc' })
+  @Length(3, 100, { message: 'Tên người dùng phải có từ 3 đến 100 ký tự' })
   username: string;
 
-  @IsString({ message: 'Password must be a string' })
-  @IsNotEmpty({ message: 'Password is required' })
-  @Length(8, 255, { message: 'Password must be at least 8 characters long' })
+  @IsString({ message: 'Mật khẩu phải là chuỗi ký tự' })
+  @IsNotEmpty({ message: 'Mật khẩu là bắt buộc' })
+  @Length(8, 255, { message: 'Mật khẩu phải có ít nhất 8 ký tự' })
   password: string;
 
-  @IsEmail({}, { message: 'Invalid email format' })
-  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Định dạng email không hợp lệ' })
+  @IsNotEmpty({ message: 'Email là bắt buộc' })
   email: string;
 
-  @IsString({ message: 'Phone must be a string' })
+  @IsString({ message: 'Số điện thoại phải là chuỗi ký tự' })
   @IsOptional() // Nếu số điện thoại không bắt buộc, dùng @IsOptional
   @Matches(/^[0-9]{10,15}$/, {
-    message: 'Phone number must be between 10 and 15 digits',
+    message: 'Số điện thoại phải có từ 10 đến 15 chữ số',
   })
   phone?: string; // '?' biểu thị đây là trường không bắt buộc
 }

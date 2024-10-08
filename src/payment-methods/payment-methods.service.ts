@@ -28,7 +28,9 @@ export class PaymentMethodsService {
       });
       return await this.paymentMethodsRepository.save(paymentMethod);
     } catch (error) {
-      throw new InternalServerErrorException('Error creating payment method');
+      throw new InternalServerErrorException(
+        'Lỗi khi tạo phương thức thanh toán',
+      );
     }
   }
 
@@ -36,7 +38,9 @@ export class PaymentMethodsService {
     try {
       return await this.paymentMethodsRepository.find();
     } catch (error) {
-      throw new InternalServerErrorException('Error fetching payment methods');
+      throw new InternalServerErrorException(
+        'Lỗi khi lấy phương thức thanh toán',
+      );
     }
   }
 
@@ -46,14 +50,18 @@ export class PaymentMethodsService {
         paymentMethodId: id,
       });
       if (!paymentMethod) {
-        throw new NotFoundException(`Payment method with ID ${id} not found`);
+        throw new NotFoundException(
+          `Phương thức thanh toán với ID ${id} không tồn tại`,
+        );
       }
       return paymentMethod;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Error fetching payment method');
+      throw new InternalServerErrorException(
+        'Lỗi khi lấy phương thức thanh toán',
+      );
     }
   }
 
@@ -71,7 +79,9 @@ export class PaymentMethodsService {
       });
       return await this.paymentMethodsRepository.save(paymentMethod);
     } catch (error) {
-      throw new InternalServerErrorException('Error updating payment method');
+      throw new InternalServerErrorException(
+        'Lỗi khi cập nhật phương thức thanh toán',
+      );
     }
   }
 
@@ -79,13 +89,17 @@ export class PaymentMethodsService {
     try {
       const result = await this.paymentMethodsRepository.delete(id);
       if (result.affected === 0) {
-        throw new NotFoundException(`Payment method with ID ${id} not found`);
+        throw new NotFoundException(
+          `Phương thức thanh toán với ID ${id} không tồn tại`,
+        );
       }
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Error deleting payment method');
+      throw new InternalServerErrorException(
+        'Lỗi khi xoá phương thức thanh toán',
+      );
     }
   }
 }

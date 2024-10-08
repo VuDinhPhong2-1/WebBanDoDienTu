@@ -17,13 +17,12 @@ import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/customize';
 import { Role } from '../enums/role.enum';
 
-@UseGuards(JwtAuthGuard, RolesGuard) // Bảo vệ các route với JWT và Roles Guard
-@Roles(Role.ADMIN) // Chỉ cho phép Admin truy cập
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  // Tạo một category mới
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Post()
   async create(
     @Body() createCategoryDto: CreateCategoryDto,
@@ -31,19 +30,18 @@ export class CategoriesController {
     return await this.categoriesService.create(createCategoryDto);
   }
 
-  // Lấy tất cả categories
   @Get()
   async findAll(): Promise<Categories[]> {
     return await this.categoriesService.findAll();
   }
 
-  // Lấy category theo ID
   @Get(':id')
   async findOne(@Param('id') id: number): Promise<Categories> {
     return await this.categoriesService.findOne(id);
   }
 
-  // Cập nhật category theo ID
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Put(':id')
   async update(
     @Param('id') id: number,
@@ -52,7 +50,8 @@ export class CategoriesController {
     return await this.categoriesService.update(id, updateCategoryDto);
   }
 
-  // Xóa category theo ID
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Delete(':id')
   async remove(@Param('id') id: number): Promise<void> {
     return await this.categoriesService.remove(id);
@@ -70,5 +69,9 @@ export class CategoriesController {
   @Put(':id/toggle-status')
   async toggleStatus(@Param('id') id: number): Promise<Categories> {
     return await this.categoriesService.toggleStatus(id);
+  }
+  @Get(':name/children')
+  async findCategoryLevel2(@Param('name') name: string) {
+    return await this.categoriesService.findCategoryLevel2(name);
   }
 }

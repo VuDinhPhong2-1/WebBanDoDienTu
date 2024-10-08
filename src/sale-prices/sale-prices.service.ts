@@ -26,7 +26,7 @@ export class SalePricesService {
         where: { salePriceId },
       });
       if (!salePrice) {
-        throw new NotFoundException('SalePrice not found');
+        throw new NotFoundException('Không tìm thấy giá bán.');
       }
       return salePrice;
     } catch (error) {
@@ -45,7 +45,7 @@ export class SalePricesService {
       }
       return await this.salePricesRepository.save(salePrice);
     } catch (error) {
-      throw new BadRequestException('Không thể tạo giá bán');
+      throw new BadRequestException('Không thể tạo giá bán.');
     }
   }
 
@@ -58,7 +58,7 @@ export class SalePricesService {
       Object.assign(salePrice, updateSalePriceDto);
       return await this.salePricesRepository.save(salePrice);
     } catch (error) {
-      throw new BadRequestException('Failed to update SalePrice');
+      throw new BadRequestException('Không thể cập nhật giá bán.');
     }
   }
 
@@ -67,7 +67,7 @@ export class SalePricesService {
       const salePrice = await this.findOne(salePriceId);
       await this.salePricesRepository.remove(salePrice);
     } catch (error) {
-      throw new BadRequestException('Failed to delete SalePrice');
+      throw new BadRequestException('Không thể xóa giá bán.');
     }
   }
 }

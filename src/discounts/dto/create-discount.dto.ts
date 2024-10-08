@@ -1,4 +1,3 @@
-// create-discount.dto.ts
 import {
   IsNotEmpty,
   IsOptional,
@@ -13,28 +12,28 @@ export class CreateDiscountDto {
   @IsNumber(
     { maxDecimalPlaces: 2 },
     {
-      message: 'discountPercent must be a number with up to 2 decimal places.',
+      message: 'Phần trăm giảm giá phải là số và có tối đa 2 chữ số thập phân.',
     },
   )
-  @Min(0, { message: 'discountPercent must be a positive number.' })
-  @IsNotEmpty({ message: 'discountPercent is required.' })
+  @Min(0, { message: 'Phần trăm giảm giá phải là một số dương.' })
+  @IsNotEmpty({ message: 'Phần trăm giảm giá là bắt buộc.' })
   discountPercent: number;
 
   @IsOptional()
   @Length(1, 255, {
-    message: 'description must be between 1 and 255 characters.',
+    message: 'Mô tả phải có độ dài từ 1 đến 255 ký tự.',
   })
   description?: string;
 
-  @IsDateString({}, { message: 'startDate must be a valid date string.' })
-  @IsNotEmpty({ message: 'startDate is required.' })
+  @IsDateString({}, { message: 'Ngày bắt đầu phải là chuỗi ngày hợp lệ.' })
+  @IsNotEmpty({ message: 'Ngày bắt đầu là bắt buộc.' })
   startDate: string;
 
-  @IsDateString({}, { message: 'endDate must be a valid date string.' })
-  @IsNotEmpty({ message: 'endDate is required.' })
+  @IsDateString({}, { message: 'Ngày kết thúc phải là chuỗi ngày hợp lệ.' })
+  @IsNotEmpty({ message: 'Ngày kết thúc là bắt buộc.' })
   endDate: string;
 
-  @IsBoolean({ message: 'isActive must be a boolean value.' })
+  @IsBoolean({ message: 'Trạng thái hoạt động phải là giá trị boolean.' })
   @IsOptional()
   isActive?: boolean;
 }

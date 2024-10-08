@@ -54,19 +54,25 @@ export class AuthsService {
     });
   }
 
+  // Xác thực người dùng
   async validateUser(username: string, password: string) {
     const user = await this.usersService.findOneByUsername(username);
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại.');
+    }
     const isValidPassword = await this.usersService.isValidPassword(
       password,
       user.passwordHash,
     );
-    if (user && isValidPassword) {
+    if (isValidPassword) {
       const { passwordHash, ...result } = user;
       return result;
+    } else {
+      throw new BadRequestException('Mật khẩu không đúng.');
     }
-    return null;
   }
 
+  // Đăng nhập và tạo các token
   async login(user: Users, response: Response) {
     const payload = this.createTokenPayload(user);
 
@@ -83,6 +89,7 @@ export class AuthsService {
     };
   }
 
+  // Xử lý khi cần token mới từ refresh token
   async processNewToken(refresh_token: string, response: Response) {
     try {
       this.jwtService.verify(refresh_token, {
@@ -107,31 +114,38 @@ export class AuthsService {
           refresh_token: new_refresh_token,
         };
       } else {
-        throw new BadRequestException('Invalid token! Please log in again.');
+        throw new BadRequestException(
+          'Token không hợp lệ! Vui lòng đăng nhập lại.',
+        );
       }
     } catch (error) {
-      throw new BadRequestException('Invalid token! Please log in again.');
+      throw new BadRequestException(
+        'Token không hợp lệ! Vui lòng đăng nhập lại.',
+      );
     }
   }
 
+  // Xóa refresh token và cookie
   async deleteCookieAndToken(userId: number) {
     try {
       await this.usersService.updateUserRefreshToken(null, userId);
       return true;
     } catch (error) {
-      throw new BadRequestException(error);
+      throw new BadRequestException('Không thể xóa token và cookie.');
     }
   }
 
+  // Giải mã token
   async decodeToken(token: string) {
     try {
       const decoded = this.jwtService.decode(token);
       return decoded;
     } catch (error) {
-      throw new Error('Invalid token');
+      throw new BadRequestException('Token không hợp lệ.');
     }
   }
 
+  // Xác thực token truy cập
   async validateAccessToken(token: string): Promise<boolean> {
     try {
       this.jwtService.verify(token, {
@@ -143,6 +157,7 @@ export class AuthsService {
     }
   }
 
+  // Xác thực refresh token
   async validateRefreshToken(refreshToken: string): Promise<boolean> {
     try {
       this.jwtService.verify(refreshToken, {

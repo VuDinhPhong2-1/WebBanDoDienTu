@@ -1,12 +1,9 @@
-// utils/price-calculation.ts
-
 import { Products } from '../entities/Products';
 import { SalePrices } from '../entities/SalePrices';
 import { Discounts } from '../entities/Discounts';
 
 interface PriceCalculationResult {
   originalPrice: number;
-  currentPrice: number;
   discountedPrice: number;
 }
 
@@ -23,16 +20,8 @@ export function calculatePrices(
   );
   const originalPrice = originalSalePrice.price;
 
-  // Lấy giá hiện tại
-  const currentSalePrice = salePrices
-    .filter((sp) => sp.startDate <= now && sp.endDate >= now)
-    .sort((a, b) => b.applyDate.getTime() - a.applyDate.getTime())[0];
-  const currentPrice = currentSalePrice
-    ? currentSalePrice.price
-    : originalPrice;
-
   // Áp dụng chiết khấu nếu có
-  let discountedPrice = currentPrice;
+  let discountedPrice = originalPrice;
   if (product.discountId) {
     const discount = discountMap.get(product.discountId);
 
@@ -44,9 +33,9 @@ export function calculatePrices(
       discount.discountPercent > 0
     ) {
       discountedPrice =
-        currentPrice - currentPrice * (discount.discountPercent / 100);
+        originalPrice - originalPrice * (discount.discountPercent / 100);
     }
   }
 
-  return { originalPrice, currentPrice, discountedPrice };
+  return { originalPrice, discountedPrice };
 }

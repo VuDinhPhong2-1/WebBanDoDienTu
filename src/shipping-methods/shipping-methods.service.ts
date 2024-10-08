@@ -30,7 +30,9 @@ export class ShippingMethodsService {
       });
       return await this.shippingMethodsRepository.save(shippingMethod);
     } catch (error) {
-      throw new InternalServerErrorException('Error creating shipping method');
+      throw new InternalServerErrorException(
+        'Lỗi khi tạo phương thức vận chuyển.',
+      );
     }
   }
 
@@ -38,7 +40,9 @@ export class ShippingMethodsService {
     try {
       return await this.shippingMethodsRepository.find();
     } catch (error) {
-      throw new InternalServerErrorException('Error fetching shipping methods');
+      throw new InternalServerErrorException(
+        'Lỗi khi lấy danh sách phương thức vận chuyển.',
+      );
     }
   }
 
@@ -48,11 +52,15 @@ export class ShippingMethodsService {
         shippingMethodId: id,
       });
       if (!shippingMethod) {
-        throw new NotFoundException(`Shipping method with ID ${id} not found`);
+        throw new NotFoundException(
+          `Không tìm thấy phương thức vận chuyển với ID ${id}.`,
+        );
       }
       return shippingMethod;
     } catch (error) {
-      throw new InternalServerErrorException('Error fetching shipping method');
+      throw new InternalServerErrorException(
+        'Lỗi khi lấy thông tin phương thức vận chuyển.',
+      );
     }
   }
 
@@ -70,7 +78,9 @@ export class ShippingMethodsService {
       });
       return await this.shippingMethodsRepository.save(shippingMethod);
     } catch (error) {
-      throw new InternalServerErrorException('Error updating shipping method');
+      throw new InternalServerErrorException(
+        'Lỗi khi cập nhật phương thức vận chuyển.',
+      );
     }
   }
 
@@ -78,10 +88,14 @@ export class ShippingMethodsService {
     try {
       const result = await this.shippingMethodsRepository.delete(id);
       if (result.affected === 0) {
-        throw new NotFoundException(`Shipping method with ID ${id} not found`);
+        throw new NotFoundException(
+          `Không tìm thấy phương thức vận chuyển với ID ${id}.`,
+        );
       }
     } catch (error) {
-      throw new InternalServerErrorException('Error deleting shipping method');
+      throw new InternalServerErrorException(
+        'Lỗi khi xóa phương thức vận chuyển.',
+      );
     }
   }
 }

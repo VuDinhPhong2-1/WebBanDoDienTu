@@ -1,20 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CreateOrderDetailsDto } from './dto/create-order-details.dto';
 import { UpdateOrderDetailsDto } from './dto/update-order-details.dto';
 import { OrderDetails } from '../entities/OrderDetails';
+import { Products } from '../entities/Products';
 
 @Injectable()
 export class OrderDetailsService {
   constructor(
     @InjectRepository(OrderDetails)
     private orderDetailsRepository: Repository<OrderDetails>,
+
+    @InjectRepository(Products)
+    private productRepository: Repository<Products>,
   ) {}
 
   async create(
     createOrderDetailsDto: CreateOrderDetailsDto,
     createdBy: string,
+    manager?: EntityManager,
   ): Promise<OrderDetails> {
     const orderDetail = this.orderDetailsRepository.create({
       ...createOrderDetailsDto,
@@ -23,7 +28,12 @@ export class OrderDetailsService {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    return await this.orderDetailsRepository.save(orderDetail);
+
+    if (manager) {
+      return await manager.save(orderDetail);
+    } else {
+      return await this.orderDetailsRepository.save(orderDetail);
+    }
   }
 
   async findAll(): Promise<OrderDetails[]> {
@@ -35,7 +45,9 @@ export class OrderDetailsService {
       where: { orderDetailId: id },
     });
     if (!orderDetail) {
-      throw new NotFoundException(`OrderDetail with ID ${id} not found`);
+      throw new NotFoundException(
+        `Chi tiết đơn hàng với ID ${id} không tồn tại`,
+      );
     }
     return orderDetail;
   }
@@ -57,7 +69,31 @@ export class OrderDetailsService {
   async remove(id: number): Promise<void> {
     const result = await this.orderDetailsRepository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`OrderDetail with ID ${id} not found`);
+      throw new NotFoundException(
+        `Chi tiết đơn hàng với ID ${id} không tồn tại`,
+      );
     }
+  }
+
+  async getProductsByOrderId(orderId: number) {
+    const query = this.orderDetailsRepository
+      .createQueryBuilder('od')
+      .innerJoin(Products, 'p', 'p.productId = od.productId')
+      .where('od.orderId = :orderId', { orderId })
+      .select([
+        'p.name AS name',
+        'od.quantity AS quantity',
+        'od.unitPrice AS unitPrice',
+        'od.discountPercent AS discountPercent',
+        'od.totalPrice AS totalPrice',
+      ]);
+
+    const result = await query.getRawMany();
+
+    if (result.length === 0) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng với ID ${orderId}`);
+    }
+
+    return result;
   }
 }

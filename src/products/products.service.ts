@@ -1,20 +1,18 @@
-// products.service.ts
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual, In } from 'typeorm';
+import { Repository, In, Connection } from 'typeorm';
 import { Products } from '../entities/Products';
 import { Discounts } from '../entities/Discounts';
 import { SalePrices } from '../entities/SalePrices';
 import { ProductCategories } from '../entities/ProductCategories';
 import { Categories } from '../entities/Categories';
-
+import { Users } from '../entities/Users';
 import { CreateProductWithSalePriceAndCategoriesDto } from './dto/create-product-with-sale-price-and-categories.dto';
 import { UpdateProductWithSalePriceAndCategoriesDto } from './dto/update-product-with-sale-price-and-categories.dto';
-import { Users } from '../entities/Users';
 import { SalePricesService } from '../sale-prices/sale-prices.service';
 import { CreateSalePriceDto } from '../sale-prices/dto/create-sale-price.dto';
 import { calculatePrices } from '../utils/price-calculation';
@@ -192,6 +190,7 @@ export class ProductsService {
     }
   }
 
+  // Lấy danh sách sản phẩm
   async findAll(): Promise<any[]> {
     try {
       const products = await this.productsRepository.find();
@@ -265,7 +264,7 @@ export class ProductsService {
     }
   }
 
-  // Lấy thông tin một sản phẩm cụ thể kèm thông tin danh mục và giá
+  // Lấy thông tin chi tiết của sản phẩm
   async findOne(productId: number): Promise<any> {
     try {
       const product = await this.productsRepository.findOne({
@@ -318,7 +317,7 @@ export class ProductsService {
     }
   }
 
-  // Xóa sản phẩm kèm các liên kết danh mục và giá bán
+  // Xóa sản phẩm và các liên kết
   async remove(productId: number): Promise<void> {
     const queryRunner =
       this.productsRepository.manager.connection.createQueryRunner();
@@ -346,6 +345,110 @@ export class ProductsService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException('Không thể xóa sản phẩm');
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // Phương thức để lấy sản phẩm dựa trên danh mục đệ quy từ 'laptop'
+  async findProductsByRecursiveCategory(categoryName: string): Promise<any[]> {
+    const queryRunner =
+      this.productsRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+
+    try {
+      // Lấy các danh mục đệ quy từ categoryName
+      const categories = await queryRunner.query(
+        `
+        WITH RecursiveCategories AS (
+          SELECT CategoryID, ParentCategoryID, Name
+          FROM Categories
+          WHERE Name = @0
+          
+          UNION ALL
+  
+          SELECT c.CategoryID, c.ParentCategoryID, c.Name
+          FROM Categories c
+          INNER JOIN RecursiveCategories rc ON c.ParentCategoryID = rc.CategoryID
+        )
+        SELECT DISTINCT CategoryID
+        FROM RecursiveCategories;
+        `,
+        [categoryName],
+      );
+
+      const categoryIds = categories.map((c) => c.CategoryID);
+
+      // Lấy danh sách sản phẩm dựa trên các danh mục
+      const products = await this.productsRepository.find({
+        where: {
+          productId: In(
+            (
+              await this.productCategoriesRepository.find({
+                where: { categoryId: In(categoryIds) },
+              })
+            ).map((pc) => pc.productId),
+          ),
+        },
+      });
+
+      const productIds = products.map((p) => p.productId);
+
+      const productCategories = await this.productCategoriesRepository.find({
+        where: { productId: In(productIds) },
+      });
+
+      const salePrices = await this.salePricesRepository.find({
+        where: { productId: In(productIds) },
+      });
+
+      const salePriceMap = new Map<number, SalePrices[]>();
+      salePrices.forEach((sp) => {
+        if (!salePriceMap.has(sp.productId)) {
+          salePriceMap.set(sp.productId, []);
+        }
+        salePriceMap.get(sp.productId)?.push(sp);
+      });
+
+      const discounts = await this.discountsRepository.find({
+        where: {
+          discountId: In(products.map((p) => p.discountId).filter(Boolean)),
+        },
+      });
+
+      const discountMap = new Map<number, Discounts>();
+      discounts.forEach((discount) => {
+        discountMap.set(discount.discountId, discount);
+      });
+
+      const now = new Date();
+
+      // Trả về danh sách sản phẩm với giá
+      const result = products.map((product) => {
+        const prices = calculatePrices(
+          product,
+          salePriceMap.get(product.productId) || [],
+          discountMap,
+          now,
+        );
+
+        const pcs = productCategories.filter(
+          (pc) => pc.productId === product.productId,
+        );
+        const productCategoriesList = Array.from(
+          new Set(pcs.map((pc) => pc.categoryId)),
+        );
+
+        return {
+          ...product,
+          ...prices,
+          categories: productCategoriesList,
+        };
+      });
+
+      return result;
+    } catch (error) {
+      throw new BadRequestException('Không thể lấy sản phẩm cho danh mục này');
     } finally {
       await queryRunner.release();
     }

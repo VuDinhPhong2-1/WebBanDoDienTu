@@ -1,15 +1,15 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class UpdateBrandDto {
   @IsOptional()
-  @IsString({ message: 'Brand name must be a string.' })
+  @IsString({ message: 'Tên thương hiệu phải là chuỗi ký tự.' })
   name?: string;
 
   @IsOptional()
-  @IsString({ message: 'Description must be a string.' })
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
   description?: string;
 
   @IsOptional()
-  @IsString({ message: 'Country must be a string.' })
+  @IsString({ message: 'Quốc gia phải là chuỗi ký tự.' })
   country?: string;
 }

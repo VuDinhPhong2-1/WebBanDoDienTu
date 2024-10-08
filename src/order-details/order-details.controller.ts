@@ -16,22 +16,24 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Role } from '../enums/role.enum';
 import { Users } from '../entities/Users';
+import { Products } from '../entities/Products';
+import { OrderOwnerGuard } from '../guards/order-owner.guard';
 @Controller('order-details')
-@Roles(Role.ADMIN)
+@Roles(Role.ADMIN, Role.CUSTOMER)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrderDetailsController {
   constructor(private readonly orderDetailsService: OrderDetailsService) {}
 
-  @Post()
-  create(
-    @Body() createOrderDetailsDto: CreateOrderDetailsDto,
-    @User() user: Users,
-  ) {
-    return this.orderDetailsService.create(
-      createOrderDetailsDto,
-      user.username,
-    );
-  }
+  // @Post()
+  // create(
+  //   @Body() createOrderDetailsDto: CreateOrderDetailsDto,
+  //   @User() user: Users,
+  // ) {
+  //   return this.orderDetailsService.create(
+  //     createOrderDetailsDto,
+  //     user.username,
+  //   );
+  // }
 
   @Get()
   findAll() {
@@ -39,8 +41,8 @@ export class OrderDetailsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.orderDetailsService.findOne(+id);
+  findOne(@Param('id') id: number) {
+    return this.orderDetailsService.findOne(id);
   }
 
   @Patch(':id')
@@ -59,5 +61,11 @@ export class OrderDetailsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.orderDetailsService.remove(+id);
+  }
+
+  @UseGuards(OrderOwnerGuard)
+  @Get('order/:orderId/products')
+  async getProductsByOrderId(@Param('orderId') orderId: number) {
+    return this.orderDetailsService.getProductsByOrderId(orderId);
   }
 }
