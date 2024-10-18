@@ -4,16 +4,20 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Categories } from '../entities/Categories';
 import { CreateCategoryDto } from './dto/create-categories.dto';
 import { UpdateCategoryDto } from './dto/update-categories.dto';
+import { ProductCategories } from '../entities/ProductCategories';
 
 @Injectable()
 export class CategoriesService {
   constructor(
     @InjectRepository(Categories)
     private readonly categoriesRepository: Repository<Categories>,
+
+    @InjectRepository(ProductCategories)
+    private productCategoriesRepository: Repository<ProductCategories>,
   ) {}
 
   // Tạo một category mới

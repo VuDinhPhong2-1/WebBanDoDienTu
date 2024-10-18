@@ -24,4 +24,9 @@ export class UpdateProductWithSalePriceAndCategoriesDto {
   @ArrayUnique({ message: 'Các ID danh mục phải là duy nhất.' })
   @IsInt({ each: true, message: 'Mỗi ID danh mục phải là một số nguyên.' })
   categoryIds?: number[];
+
+  @IsArray({ message: 'Danh sách hình ảnh phải là một mảng.' })
+  @ArrayUnique({ message: 'Hình ảnh phải là duy nhất.' })
+  @IsOptional()
+  images?: string[];
 }

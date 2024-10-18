@@ -14,6 +14,7 @@ import {
   UseGuards,
   Query,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductWithSalePriceAndCategoriesDto } from './dto/create-product-with-sale-price-and-categories.dto';
@@ -27,15 +28,63 @@ import { RolesGuard } from '../guards/roles.guard';
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
-  @Get('/category/:name')
-  async findProductsByCategory(@Param('name') category: string) {
-    return this.productsService.findProductsByRecursiveCategory(category);
+  // API lấy sản phẩm theo danh mục
+  // Nếu danh mục là cấp 1 hoặc cấp 2, nó sẽ lấy cả sản phẩm của các danh mục con đệ quy (cấp dưới của nó)
+  @Get('/category')
+  async findProductsByCategory(
+    @Query('name') name: string,
+    @Query('page') page: number = 1, // Nhận giá trị `page` từ query (mặc định là 1)
+    @Query('limit') limit: number = 10, // Nhận giá trị `limit` từ query (mặc định là 10)
+  ) {
+    let categoryNamesArray: string[] = [];
+    if (name) {
+      categoryNamesArray = name
+        .split(',')
+        .map((category) => decodeURIComponent(category));
+    }
+    return this.productsService.findProductsByRecursiveCategoryName(
+      categoryNamesArray,
+      page,
+      limit,
+    );
+  }
+
+  @Get('/search-by-name')
+  async findByName(
+    @Query('name') name: string, // Nhận tên sản phẩm từ query
+  ) {
+    if (!name) {
+      throw new BadRequestException('Tên sản phẩm không được bỏ trống');
+    }
+    console.log('Product name:', name);
+
+    const products = await this.productsService.findByName(name);
+
+    if (products.length === 0) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+
+    return products; // Gọi service để xử lý logic
   }
 
   @Get('/')
-  async findAll() {
-    return this.productsService.findAll();
+  async findAll(
+    @Query('page') page?: number,
+    @Query('categories') categories?: string,
+  ) {
+    let categoryNamesArray: string[] = [];
+
+    if (categories) {
+      categoryNamesArray = categories
+        .split(',')
+        .map((category) => decodeURIComponent(category));
+    }
+    return this.productsService.findAll(page, categoryNamesArray);
   }
+
+  // API tạo sản phẩm mới (chỉ dành cho Admin)
+  // Tham số: DTO chứa thông tin sản phẩm, giá bán và danh mục.
+  // Để bảo mật, yêu cầu người dùng có vai trò 'ADMIN' và phải được xác thực bằng JWT.
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
@@ -51,6 +100,9 @@ export class ProductsController {
     );
   }
 
+  // API cập nhật thông tin sản phẩm (chỉ dành cho Admin)
+  // Tham số: 'id' là ID của sản phẩm, DTO chứa thông tin cập nhật về sản phẩm.
+  // Để bảo mật, yêu cầu người dùng có vai trò 'ADMIN' và phải được xác thực bằng JWT.
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Put(':id')
@@ -68,11 +120,16 @@ export class ProductsController {
     );
   }
 
+  // API lấy thông tin chi tiết của một sản phẩm
+  // Tham số: 'id' là ID của sản phẩm.
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.findOne(id);
   }
 
+  // API xóa sản phẩm (chỉ dành cho Admin)
+  // Tham số: 'id' là ID của sản phẩm cần xóa.
+  // Để bảo mật, yêu cầu người dùng có vai trò 'ADMIN' và phải được xác thực bằng JWT.
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':id')

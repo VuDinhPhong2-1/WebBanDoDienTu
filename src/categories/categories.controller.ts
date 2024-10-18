@@ -58,19 +58,19 @@ export class CategoriesController {
   }
 
   // Lấy categories con theo Parent Category ID
-  @Get('parent/:parentId')
-  async findByParentCategoryId(
-    @Param('parentId') parentId: number,
-  ): Promise<Categories[]> {
-    return await this.categoriesService.findByParentCategoryId(parentId);
-  }
+  // @Get('parent/:parentId')
+  // async findByParentCategoryId(
+  //   @Param('parentId') parentId: number,
+  // ): Promise<Categories[]> {
+  //   return await this.categoriesService.findByParentCategoryId(parentId);
+  // }
 
   // Kích hoạt/Vô hiệu hóa category
   @Put(':id/toggle-status')
   async toggleStatus(@Param('id') id: number): Promise<Categories> {
     return await this.categoriesService.toggleStatus(id);
   }
-  @Get(':name/children')
+  @Get('children/:name')
   async findCategoryLevel2(@Param('name') name: string) {
     return await this.categoriesService.findCategoryLevel2(name);
   }

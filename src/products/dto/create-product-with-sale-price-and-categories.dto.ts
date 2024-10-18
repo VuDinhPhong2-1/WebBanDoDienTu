@@ -5,6 +5,7 @@ import {
   IsInt,
   ArrayNotEmpty,
   ArrayUnique,
+  IsOptional,
 } from 'class-validator';
 import { CreateProductDto } from './create-product.dto';
 import { CreateSalePriceDto } from '../../sale-prices/dto/create-sale-price.dto';
@@ -23,4 +24,9 @@ export class CreateProductWithSalePriceAndCategoriesDto {
   @ArrayUnique({ message: 'Các ID danh mục phải là duy nhất.' })
   @IsInt({ each: true, message: 'Mỗi ID danh mục phải là một số nguyên.' })
   categoryIds: number[];
+
+  @IsArray({ message: 'Danh sách hình ảnh phải là một mảng.' })
+  @ArrayUnique({ message: 'Hình ảnh phải là duy nhất.' })
+  @IsOptional()
+  images?: string[];
 }

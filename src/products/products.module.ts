@@ -10,6 +10,9 @@ import { SalePricesModule } from '../sale-prices/sale-prices.module';
 import { SalePricesService } from '../sale-prices/sale-prices.service';
 import { Categories } from '../entities/Categories';
 import { ProductCategories } from '../entities/ProductCategories';
+import { ProductImagesService } from '../product-images/product-images.service';
+import { ProductImages } from '../entities/ProductImages';
+import { Brands } from '../entities/Brands';
 
 @Module({
   imports: [
@@ -19,11 +22,13 @@ import { ProductCategories } from '../entities/ProductCategories';
       SalePrices,
       ProductCategories,
       Categories,
+      ProductImages,
+      Brands
     ]),
     forwardRef(() => UsersModule),
     SalePricesModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, SalePricesService],
+  providers: [ProductsService, SalePricesService, ProductImagesService],
 })
 export class ProductsModule {}

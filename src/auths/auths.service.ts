@@ -40,7 +40,7 @@ export class AuthsService {
     return response.cookie('refresh_token', refresh_token, {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
       maxAge: ms(this.configService.get<string>('JWT_REFRESH_EXPIRE')),
     });
   }
@@ -50,7 +50,7 @@ export class AuthsService {
     response.clearCookie('refresh_token', {
       httpOnly: true,
       secure: this.configService.get<string>('NODE_ENV') === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
     });
   }
 

@@ -1,6 +1,6 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
-@Index("PK__Products__B40CC6ED875D55DA", ["productId"], { unique: true })
+@Index("PK__Products__B40CC6EDF04192CE", ["productId"], { unique: true })
 @Entity("Products", { schema: "dbo" })
 export class Products {
   @PrimaryGeneratedColumn({ type: "int", name: "ProductID" })

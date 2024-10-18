@@ -15,6 +15,7 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { ShippingMethodsModule } from './shipping-methods/shipping-methods.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderDetailsModule } from './order-details/order-details.module';
+import { ProductImagesModule } from './product-images/product-images.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { OrderDetailsModule } from './order-details/order-details.module';
     ShippingMethodsModule,
     OrdersModule,
     OrderDetailsModule,
+    ProductImagesModule,
   ],
 })
 export class AppModule {}

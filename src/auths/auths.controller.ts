@@ -53,7 +53,8 @@ export class AuthsController {
       throw new BadRequestException('No refresh token found');
     }
 
-    const decoded = this.authsService.decodeToken(refresh_token);
+    const decoded = await this.authsService.decodeToken(refresh_token);
+    console.log('decoded', decoded);
     if (typeof decoded === 'object' && decoded.hasOwnProperty('userId')) {
       await this.authsService.deleteCookieAndToken(decoded['userId']);
       this.authsService.clearRefreshTokenCookie(response);
@@ -64,10 +65,15 @@ export class AuthsController {
   }
 
   // Validate Access Token API
-  @Get('validate-access-token/:token')
-  async validateAccessToken(@Param('token') token: string) {
-    const isValid = await this.authsService.validateAccessToken(token);
-    return { isValid };
+  @UseGuards(JwtAuthGuard)
+  @Get('protected')
+  getProtected(@Req() request: Request) {
+    // If token is valid, request.user will be populated by JwtAuthGuard
+    console.log(" request['user']", request['user']);
+    return {
+      message: 'You have access to this protected route',
+      user: request['user'],
+    };
   }
 
   // Decode Token API
