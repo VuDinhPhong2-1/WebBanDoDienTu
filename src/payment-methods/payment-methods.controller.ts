@@ -41,7 +41,7 @@ export class PaymentMethodsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.paymentMethodsService.findOne(+id);
+    return this.paymentMethodsService.findOneById(+id);
   }
 
   @Patch(':id')

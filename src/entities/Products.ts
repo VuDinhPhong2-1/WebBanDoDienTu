@@ -9,7 +9,7 @@ export class Products {
   @Column("nvarchar", { name: "Name", nullable: true, length: 100 })
   name: string | null;
 
-  @Column("nvarchar", { name: "Description", nullable: true, length: 255 })
+  @Column("nvarchar", { name: "Description", nullable: true })
   description: string | null;
 
   @Column("int", { name: "Quantity", nullable: true })

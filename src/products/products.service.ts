@@ -625,4 +625,112 @@ export class ProductsService {
       throw new BadRequestException('Lỗi khi tìm kiếm sản phẩm theo tên');
     }
   }
+
+  // Thêm phương thức trong service để lấy sản phẩm theo mảng ids
+  async findByIds(ids: number[]) {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('Danh sách IDs không hợp lệ');
+    }
+    try {
+      const products = await this.productsRepository.find({
+        where: { productId: In(ids) },
+      });
+
+      if (products.length === 0) {
+        throw new NotFoundException(
+          'Không tìm thấy sản phẩm với các IDs đã cho',
+        );
+      }
+      const productIds = products.map((p) => p.productId);
+      const salePrices = await this.salePricesRepository.find({
+        where: { productId: In(productIds) },
+      });
+
+      const salePriceMap = new Map<number, SalePrices[]>();
+      salePrices.forEach((sp) => {
+        if (!salePriceMap.has(sp.productId)) {
+          salePriceMap.set(sp.productId, []);
+        }
+        salePriceMap.get(sp.productId)?.push(sp);
+      });
+
+      const discounts = await this.discountsRepository.find({
+        where: {
+          discountId: In(products.map((p) => p.discountId).filter(Boolean)),
+        },
+      });
+
+      const discountMap = new Map<number, Discounts>();
+      discounts.forEach((discount) => {
+        discountMap.set(discount.discountId, discount);
+      });
+
+      const productImages = await this.productsRepository.manager.find(
+        ProductImages,
+        {
+          where: { productId: In(productIds) },
+        },
+      );
+
+      const productImagesMap = new Map<number, string[]>();
+      productImages.forEach((image) => {
+        if (!productImagesMap.has(image.productId)) {
+          productImagesMap.set(image.productId, []);
+        }
+        productImagesMap.get(image.productId)?.push(image.imageUrl);
+      });
+
+      const now = new Date();
+
+      // Trả về danh sách sản phẩm với giá và hình ảnh, kèm theo tên danh mục
+      const result = products.map((product) => {
+        const prices = calculatePrices(
+          product,
+          salePriceMap.get(product.productId) || [],
+          discountMap,
+          now,
+        );
+
+        const images = productImagesMap.get(product.productId) || [];
+
+        return {
+          ...product,
+          ...prices,
+          images,
+        };
+      });
+      return result;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async reduceProductQuantity(
+    productId: number,
+    quantity: number,
+    queryRunner: any,
+  ): Promise<void> {
+    // Lấy sản phẩm từ database
+    const product = await queryRunner.manager.findOne(Products, {
+      where: { productId },
+    });
+
+    if (!product) {
+      throw new NotFoundException(
+        `Không tìm thấy sản phẩm với ID: ${productId}`,
+      );
+    }
+
+    // Kiểm tra xem sản phẩm có đủ số lượng không
+    if (product.quantity < quantity) {
+      throw new BadRequestException(
+        `Sản phẩm ${product.name} không đủ số lượng`,
+      );
+    }
+
+    // Trừ đi số lượng sản phẩm
+    product.quantity -= quantity;
+
+    await queryRunner.manager.save(product);
+  }
 }

@@ -44,7 +44,7 @@ export class PaymentMethodsService {
     }
   }
 
-  async findOne(id: number): Promise<PaymentMethods> {
+  async findOneById(id: number): Promise<PaymentMethods> {
     try {
       const paymentMethod = await this.paymentMethodsRepository.findOneBy({
         paymentMethodId: id,
@@ -64,6 +64,26 @@ export class PaymentMethodsService {
       );
     }
   }
+  async findOneByName(name: string): Promise<PaymentMethods> {
+    try {
+      const paymentMethod = await this.paymentMethodsRepository.findOneBy({
+        name: name, // Tìm theo name
+      });
+      if (!paymentMethod) {
+        throw new NotFoundException(
+          `Phương thức thanh toán với tên ${name} không tồn tại`,
+        );
+      }
+      return paymentMethod;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Lỗi khi lấy phương thức thanh toán',
+      );
+    }
+  }
 
   async update(
     id: number,
@@ -71,7 +91,7 @@ export class PaymentMethodsService {
     userId: number,
   ): Promise<PaymentMethods> {
     try {
-      const paymentMethod = await this.findOne(id);
+      const paymentMethod = await this.findOneById(id);
       this.paymentMethodsRepository.merge(paymentMethod, {
         ...updatePaymentMethodDto,
         updatedBy: userId,

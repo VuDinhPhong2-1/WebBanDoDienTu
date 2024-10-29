@@ -37,4 +37,16 @@ export class ProductImagesService {
 
     return images;
   }
+
+  async findImagesByProductIds(productIds: number[]) {
+    if (!productIds || productIds.length === 0) {
+      return [];
+    }
+
+    const images = await this.productImagesRepository.find({
+      where: { productId: In(productIds) },
+    });
+
+    return images;
+  }
 }

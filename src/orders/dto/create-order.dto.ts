@@ -4,9 +4,18 @@ import {
   IsOptional,
   IsDate,
   ValidateNested,
+  IsArray,
+  ArrayNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateOrderDetailsDto } from '../../order-details/dto/create-order-details.dto';
+
+class ProductOrderDto {
+  @IsNumber({}, { message: 'productId phải là một số.' })
+  productId: number;
+
+  @IsNumber({}, { message: 'Số lượng phải là một số.' })
+  quantity: number;
+}
 
 export class CreateOrderDto {
   @IsOptional()
@@ -21,40 +30,26 @@ export class CreateOrderDto {
         'Tổng số tiền phải là một số hợp lệ với tối đa 2 chữ số thập phân.',
     },
   )
-  @IsOptional()
-  totalAmount?: number;
-
-  @IsString({ message: 'Số theo dõi phải là một chuỗi ký tự.' })
-  @IsOptional()
-  trackingNumber?: string;
+  totalAmount: number;
 
   @IsString({ message: 'Địa chỉ giao hàng phải là một chuỗi ký tự.' })
   @IsOptional()
   shippingAddress?: string;
 
-  @IsString({ message: 'Địa chỉ thanh toán phải là một chuỗi ký tự.' })
+  @IsString({ message: 'Tên phương thức thanh toán phải là một chuỗi.' })
   @IsOptional()
-  billingAddress?: string;
+  paymentMethodName?: string;
 
-  @IsNumber({}, { message: 'ID phương thức thanh toán phải là một số.' })
+  @IsString({ message: 'Tên khách hàng phải là một chuỗi ký tự.' })
+  customerName: string;
+
+  @IsString({ message: 'Số điện thoại khách hàng phải là một chuỗi ký tự.' })
   @IsOptional()
-  paymentMethodId?: number;
+  customerPhone?: string;
 
-  @IsNumber(
-    { maxDecimalPlaces: 2 },
-    {
-      message:
-        'Phần trăm chiết khấu phải là một số hợp lệ với tối đa 2 chữ số thập phân.',
-    },
-  )
-  @IsOptional()
-  discountPercent?: number;
-
-  @IsNumber({}, { message: 'ID phương thức vận chuyển phải là một số.' })
-  @IsOptional()
-  shippingMethodId?: number;
-
-  @ValidateNested({ each: true, message: 'Chi tiết đơn hàng không hợp lệ.' })
-  @Type(() => CreateOrderDetailsDto) // Validate danh sách các chi tiết đơn hàng
-  orderDetails: CreateOrderDetailsDto[];
+  @IsArray({ message: 'Danh sách sản phẩm phải là một mảng.' })
+  @ArrayNotEmpty({ message: 'Danh sách sản phẩm không được để trống.' })
+  @ValidateNested({ each: true })
+  @Type(() => ProductOrderDto)
+  products: ProductOrderDto[];
 }

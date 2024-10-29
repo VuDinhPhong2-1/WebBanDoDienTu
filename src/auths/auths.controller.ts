@@ -54,7 +54,6 @@ export class AuthsController {
     }
 
     const decoded = await this.authsService.decodeToken(refresh_token);
-    console.log('decoded', decoded);
     if (typeof decoded === 'object' && decoded.hasOwnProperty('userId')) {
       await this.authsService.deleteCookieAndToken(decoded['userId']);
       this.authsService.clearRefreshTokenCookie(response);
@@ -69,7 +68,6 @@ export class AuthsController {
   @Get('protected')
   getProtected(@Req() request: Request) {
     // If token is valid, request.user will be populated by JwtAuthGuard
-    console.log(" request['user']", request['user']);
     return {
       message: 'You have access to this protected route',
       user: request['user'],

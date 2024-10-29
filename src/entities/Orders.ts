@@ -26,9 +26,6 @@ export class Orders {
   @Column("nvarchar", { name: "ShippingAddress", nullable: true, length: 255 })
   shippingAddress: string | null;
 
-  @Column("nvarchar", { name: "BillingAddress", nullable: true, length: 255 })
-  billingAddress: string | null;
-
   @Column("int", { name: "UserID", nullable: true })
   userId: number | null;
 
@@ -65,4 +62,17 @@ export class Orders {
 
   @Column("int", { name: "ShippingMethodID", nullable: true })
   shippingMethodId: number | null;
+
+  @Column("nvarchar", { name: "customerName", nullable: true, length: 255 })
+  customerName: string | null;
+
+  @Column("varchar", {
+    name: "payment_status",
+    length: 50,
+    default: () => "'Unpaid'",
+  })
+  paymentStatus: string;
+
+  @Column("nvarchar", { name: "customerPhone", nullable: true, length: 15 })
+  customerPhone: string | null;
 }

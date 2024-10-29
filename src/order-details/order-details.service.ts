@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { CreateOrderDetailsDto } from './dto/create-order-details.dto';
 import { UpdateOrderDetailsDto } from './dto/update-order-details.dto';
 import { OrderDetails } from '../entities/OrderDetails';
 import { Products } from '../entities/Products';
+import { ProductImagesService } from '../product-images/product-images.service';
 
 @Injectable()
 export class OrderDetailsService {
@@ -12,27 +17,28 @@ export class OrderDetailsService {
     @InjectRepository(OrderDetails)
     private orderDetailsRepository: Repository<OrderDetails>,
 
-    @InjectRepository(Products)
-    private productRepository: Repository<Products>,
+    private readonly productImagesService: ProductImagesService,
   ) {}
 
   async create(
     createOrderDetailsDto: CreateOrderDetailsDto,
-    createdBy: string,
-    manager?: EntityManager,
+    manager: EntityManager,
   ): Promise<OrderDetails> {
-    const orderDetail = this.orderDetailsRepository.create({
-      ...createOrderDetailsDto,
-      createdBy,
-      updatedBy: createdBy,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    try {
+      // Tạo mới chi tiết đơn hàng từ DTO
+      const orderDetail = manager.create(OrderDetails, {
+        ...createOrderDetailsDto,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-    if (manager) {
-      return await manager.save(orderDetail);
-    } else {
-      return await this.orderDetailsRepository.save(orderDetail);
+      // Lưu chi tiết đơn hàng vào cơ sở dữ liệu
+      const savedOrderDetail = await manager.save(orderDetail);
+      return savedOrderDetail;
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Lỗi khi tạo chi tiết đơn hàng',
+      );
     }
   }
 
@@ -86,14 +92,33 @@ export class OrderDetailsService {
         'od.unitPrice AS unitPrice',
         'od.discountPercent AS discountPercent',
         'od.totalPrice AS totalPrice',
+        'od.productId AS productId',
       ]);
 
-    const result = await query.getRawMany();
+    const orderDetails = await query.getRawMany();
 
-    if (result.length === 0) {
+    if (orderDetails.length === 0) {
       throw new NotFoundException(`Không tìm thấy đơn hàng với ID ${orderId}`);
     }
 
-    return result;
+    const productIds = orderDetails.map((orderDetail) => orderDetail.productId);
+
+    const productImages =
+      await this.productImagesService.findImagesByProductIds(productIds);
+
+    const groupedImages = new Map<number, string[]>();
+
+    productImages.forEach((image) => {
+      if (!groupedImages.has(image.productId)) {
+        groupedImages.set(image.productId, []);
+      }
+      groupedImages.get(image.productId).push(image.imageUrl); 
+    });
+    const orderDetailsWithImages = orderDetails.map((orderDetail) => ({
+      ...orderDetail,
+      images: groupedImages.get(orderDetail.productId) || [],
+    }));
+
+    return { orderDetails: orderDetailsWithImages };
   }
 }

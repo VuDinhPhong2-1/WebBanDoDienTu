@@ -11,11 +11,14 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Orders } from '../entities/Orders';
 import { Users } from '../entities/Users';
-import { OrderStatus } from '../enums/OrderStatus.enum';
 import { Products } from '../entities/Products';
 import { SalePrices } from '../entities/SalePrices';
 import { Discounts } from '../entities/Discounts';
 import { calculatePrices } from '../utils/price-calculation';
+import { ProductsService } from '../products/products.service';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
+import { PaymentStatus } from '../enums/paymentStatus.enum';
+import { OrderStatus } from '../enums/orderStatus.enum';
 
 @Injectable()
 export class OrdersService {
@@ -24,140 +27,117 @@ export class OrdersService {
     private ordersRepository: Repository<Orders>,
     private orderDetailsService: OrderDetailsService,
     private connection: Connection,
+    private readonly productsService: ProductsService,
+    private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto, user: Users): Promise<Orders> {
-    return await this.connection.transaction(async (manager) => {
-      try {
-        const now = new Date();
+  async create(createOrderDto: CreateOrderDto, user: Users) {
+    const queryRunner =
+      this.ordersRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const products = await this.productsService.findByIds(
+        createOrderDto.products.map((p) => p.productId),
+      );
 
-        // Lấy danh sách productIds từ orderDetails
-        const productIds = createOrderDto.orderDetails.map(
-          (item) => item.productId,
+      let totalAmount = 0;
+      let totalDiscountedAmount = 0;
+      let totalOriginalAmount = 0;
+
+      const orderDetailsList = [];
+
+      for (const productOrder of createOrderDto.products) {
+        const product = products.find(
+          (p) => p.productId === productOrder.productId,
         );
 
-        // Lấy thông tin sản phẩm
-        const products = await manager.find(Products, {
-          where: { productId: In(productIds) },
-        });
-        const productMap = new Map<number, Products>();
-        products.forEach((product) => {
-          productMap.set(product.productId, product);
-        });
-
-        // Kiểm tra xem có sản phẩm nào không tồn tại không
-        if (products.length !== productIds.length) {
-          throw new BadRequestException('Một hoặc nhiều sản phẩm không hợp lệ');
-        }
-
-        // Lấy thông tin giá bán
-        const salePrices = await manager.find(SalePrices, {
-          where: { productId: In(productIds) },
-        });
-
-        // Tạo một map cho sale prices theo productId
-        const salePriceMap = new Map<number, SalePrices[]>();
-        salePrices.forEach((sp) => {
-          if (!salePriceMap.has(sp.productId)) {
-            salePriceMap.set(sp.productId, []);
-          }
-          salePriceMap.get(sp.productId)?.push(sp);
-        });
-
-        // Lấy thông tin chiết khấu
-        const discountIds = products
-          .map((p) => p.discountId)
-          .filter((id) => id !== null) as number[];
-
-        const discounts = await manager.find(Discounts, {
-          where: { discountId: In(discountIds) },
-        });
-
-        const discountMap = new Map<number, Discounts>();
-        discounts.forEach((discount) => {
-          discountMap.set(discount.discountId, discount);
-        });
-
-        // Tính toán giá cho từng sản phẩm và tạo orderDetails
-        let totalAmount = 0;
-
-        const orderDetailsData = [];
-
-        for (const item of createOrderDto.orderDetails) {
-          const product = productMap.get(item.productId);
-          if (!product) {
-            throw new BadRequestException(
-              `Sản phẩm với ID ${item.productId} không tồn tại`,
-            );
-          }
-
-          // Kiểm tra số lượng tồn kho
-          if (product.quantity < item.quantity) {
-            throw new BadRequestException(
-              `Sản phẩm với ID ${item.productId} không đủ số lượng. Tồn kho: ${product.quantity}, Yêu cầu: ${item.quantity}`,
-            );
-          }
-
-          const prices = await calculatePrices(
-            product,
-            salePriceMap.get(product.productId) || [],
-            discountMap,
-            now,
+        if (!product) {
+          throw new BadRequestException(
+            `Sản phẩm ${productOrder.productId} không tồn tại`,
           );
-
-          const quantity = item.quantity;
-          const unitPrice = prices.discountedPrice;
-          const totalPrice = unitPrice * quantity;
-
-          totalAmount += totalPrice;
-
-          orderDetailsData.push({
-            productId: item.productId,
-            orderId: null,
-            quantity,
-            unitPrice,
-            discountPercent:
-              product.discountId && discountMap.get(product.discountId)
-                ? discountMap.get(product.discountId).discountPercent
-                : 0,
-            totalPrice,
-            createdBy: user.username,
-          });
-
-          // Cập nhật số lượng sản phẩm
-          product.quantity -= quantity;
-          await manager.save(product);
         }
 
-        // Tạo đơn hàng
-        const order = this.ordersRepository.create({
-          userId: user.userId,
-          createdBy: user.userId,
-          status: OrderStatus.PENDING,
-          totalAmount,
-          orderDate: new Date(),
-          // Nếu `createOrderDto` chứa các trường khác không liên quan đến `Orders`,
-          // hãy đảm bảo chỉ gán những trường cần thiết
-          // ...createOrderDto, // Cẩn thận với spread operator
-        });
+        const productPrice = product.discountedPrice
+          ? product.discountedPrice
+          : product.originalPrice;
 
-        const savedOrder = await manager.save(order);
+        const productOriginalPrice = product.originalPrice;
 
-        // Gán orderId cho orderDetails và lưu vào cơ sở dữ liệu
-        for (const detail of orderDetailsData) {
-          detail.orderId = savedOrder.orderId;
-          await this.orderDetailsService.create(detail, user.username, manager);
-          // Đảm bảo rằng phương thức create trong OrderDetailsService cũng nhận được manager để sử dụng trong transaction
+        totalAmount += productPrice * productOrder.quantity;
+        totalOriginalAmount += productOriginalPrice * productOrder.quantity;
+
+        if (product.discountedPrice) {
+          totalDiscountedAmount += productPrice * productOrder.quantity;
         }
 
-        return savedOrder;
-      } catch (error) {
-        // Nếu có lỗi, transaction sẽ tự động rollback
-        throw new InternalServerErrorException(
-          'Lỗi khi tạo đơn hàng và chi tiết đơn hàng',
+        const orderDetail = {
+          productId: product.productId,
+          quantity: productOrder.quantity,
+          unitPrice: productPrice,
+          discountPercent: product.discountedPrice
+            ? ((productOriginalPrice - product.discountedPrice) /
+                productOriginalPrice) *
+              100
+            : 0,
+          totalPrice: productPrice * productOrder.quantity,
+        };
+        orderDetailsList.push(orderDetail);
+
+        await this.productsService.reduceProductQuantity(
+          productOrder.productId,
+          productOrder.quantity,
+          queryRunner,
         );
       }
-    });
+
+      const totalDiscountPercentage = totalOriginalAmount
+        ? ((totalOriginalAmount - totalDiscountedAmount) /
+            totalOriginalAmount) *
+          100
+        : 0;
+
+      const paymentMethod = await this.paymentMethodsService.findOneByName(
+        createOrderDto.paymentMethodName,
+      );
+
+      const newOrder = queryRunner.manager.create(Orders, {
+        customerName: createOrderDto.customerName,
+        customerPhone: createOrderDto.customerPhone,
+        totalAmount: totalAmount,
+        createdBy: user.userId,
+        userId: user.userId,
+        orderDate: new Date(),
+        paymentMethodId: paymentMethod.paymentMethodId,
+        discountPercent: totalDiscountPercentage,
+        shippingAddress: createOrderDto.shippingAddress,
+        status: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.Pending,
+      });
+
+      // Lưu order vào cơ sở dữ liệu bằng queryRunner
+      const savedOrder = await queryRunner.manager.save(newOrder);
+
+      // Lưu từng order detail vào cơ sở dữ liệu
+      for (let orderDetail of orderDetailsList) {
+        orderDetail.orderId = savedOrder.orderId;
+        await this.orderDetailsService.create(orderDetail, queryRunner.manager);
+      }
+
+      // Commit transaction nếu không có lỗi
+      await queryRunner.commitTransaction();
+      return savedOrder;
+    } catch (error) {
+      // Rollback nếu có lỗi
+      await queryRunner.rollbackTransaction();
+      console.log(error);
+      throw new InternalServerErrorException(
+        'Lỗi khi tạo đơn hàng và chi tiết đơn hàng',
+      );
+    } finally {
+      // Kết thúc transaction
+      await queryRunner.release();
+    }
   }
 
   async findAll(): Promise<Orders[]> {
@@ -193,5 +173,39 @@ export class OrdersService {
     if (result.affected === 0) {
       throw new NotFoundException(`Đơn hàng với ID ${id} không tồn tại`);
     }
+  }
+
+  async findOneWithDetails(orderId: number) {
+    const order = await this.ordersRepository.findOne({
+      where: { orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Đơn hàng với ID ${orderId} không tồn tại`);
+    }
+    const paymentMethod = await this.paymentMethodsService.findOneById(
+      order.paymentMethodId,
+    );
+    const orderDetails =
+      await this.orderDetailsService.getProductsByOrderId(orderId);
+
+    return {
+      order,
+      orderDetails,
+      paymentMethodDescription: paymentMethod.description,
+    };
+  }
+  async updatePaymentOrderStatus(
+    orderId: number,
+    status: string,
+  ): Promise<void> {
+    const order = await this.findOne(orderId);
+    if (!order) {
+      throw new NotFoundException(`Đơn hàng với ID ${orderId} không tồn tại`);
+    }
+
+    order.paymentStatus = status;
+    await this.ordersRepository.save(order);
+    console.log(`Updated Order ID ${orderId} to payment status: ${status}`);
   }
 }

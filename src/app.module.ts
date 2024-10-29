@@ -16,6 +16,8 @@ import { ShippingMethodsModule } from './shipping-methods/shipping-methods.modul
 import { OrdersModule } from './orders/orders.module';
 import { OrderDetailsModule } from './order-details/order-details.module';
 import { ProductImagesModule } from './product-images/product-images.module';
+import { MomoPaymentModule } from './momo-payment/momo-payment.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { ProductImagesModule } from './product-images/product-images.module';
     OrdersModule,
     OrderDetailsModule,
     ProductImagesModule,
+    MomoPaymentModule,
+    StripeModule,
   ],
 })
 export class AppModule {}

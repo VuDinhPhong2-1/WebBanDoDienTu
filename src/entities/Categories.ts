@@ -1,6 +1,7 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 @Index("PK__Categori__19093A2B9C017D95", ["categoryId"], { unique: true })
+@Index("unique_category_name", ["name"], { unique: true })
 @Entity("Categories", { schema: "dbo" })
 export class Categories {
   @PrimaryGeneratedColumn({ type: "int", name: "CategoryID" })
@@ -9,7 +10,12 @@ export class Categories {
   @Column("int", { name: "ParentCategoryID", nullable: true })
   parentCategoryId: number | null;
 
-  @Column("nvarchar", { name: "Name", nullable: true, length: 100 })
+  @Column("nvarchar", {
+    name: "Name",
+    nullable: true,
+    unique: true,
+    length: 100,
+  })
   name: string | null;
 
   @Column("nvarchar", { name: "Description", nullable: true, length: 255 })

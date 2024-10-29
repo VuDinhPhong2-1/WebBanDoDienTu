@@ -15,7 +15,7 @@ export class AuthsService {
   ) {}
 
   // Hàm tạo payload chung
-  createTokenPayload(user: Users) {
+  createTokenPayload(user: Users, roles?: string[]) {
     const { userId, fullName, email } = user;
     return {
       sub: 'token login',
@@ -23,6 +23,7 @@ export class AuthsService {
       userId,
       fullName,
       email,
+      roles: roles || [],
     };
   }
 
@@ -72,9 +73,12 @@ export class AuthsService {
     }
   }
 
-  // Đăng nhập và tạo các token
   async login(user: Users, response: Response) {
     const payload = this.createTokenPayload(user);
+
+    const roles = await this.usersService.getUserRoles(user.userId);
+
+    payload.roles = roles.map((role) => role.roleName);
 
     this.clearRefreshTokenCookie(response);
 
@@ -83,9 +87,18 @@ export class AuthsService {
 
     await this.usersService.updateUserRefreshToken(refresh_token, user.userId);
 
+    const {
+      passwordHash,
+      createdBy,
+      updatedBy,
+      createdAt,
+      updatedAt,
+      ...userInfo
+    } = user;
+
     return {
       access_token: this.jwtService.sign(payload),
-      refresh_token,
+      user: userInfo, // Trả về thông tin user không bao gồm các trường nhạy cảm
     };
   }
 

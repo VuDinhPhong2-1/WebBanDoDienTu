@@ -48,7 +48,24 @@ export class ProductsController {
       limit,
     );
   }
+  @Get('/by-ids')
+  async findByIds(@Query('ids') ids: string) {
+    if (!ids) {
+      throw new BadRequestException('Danh sách IDs không được bỏ trống');
+    }
 
+    // Chuyển đổi chuỗi ids thành mảng số
+    const idArray = ids.split(',').map((id) => {
+      const parsedId = parseInt(id.trim(), 10);
+      if (isNaN(parsedId)) {
+        throw new BadRequestException(`ID không hợp lệ: ${id}`);
+      }
+      return parsedId;
+    });
+
+    // Gọi service để xử lý
+    return this.productsService.findByIds(idArray);
+  }
   @Get('/search-by-name')
   async findByName(
     @Query('name') name: string, // Nhận tên sản phẩm từ query
@@ -56,7 +73,6 @@ export class ProductsController {
     if (!name) {
       throw new BadRequestException('Tên sản phẩm không được bỏ trống');
     }
-    console.log('Product name:', name);
 
     const products = await this.productsService.findByName(name);
 

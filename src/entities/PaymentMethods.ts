@@ -1,6 +1,6 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
-@Index("PK__PaymentM__46612FB88D339F98", ["paymentMethodId"], { unique: true })
+@Index("PK__PaymentM__46612FB803595EB7", ["paymentMethodId"], { unique: true })
 @Entity("PaymentMethods", { schema: "dbo" })
 export class PaymentMethods {
   @PrimaryGeneratedColumn({ type: "int", name: "paymentMethodId" })
@@ -9,7 +9,7 @@ export class PaymentMethods {
   @Column("varchar", { name: "name", length: 100 })
   name: string;
 
-  @Column("varchar", { name: "description", nullable: true, length: 255 })
+  @Column("nvarchar", { name: "description", nullable: true, length: 255 })
   description: string | null;
 
   @Column("bit", { name: "isActive", nullable: true, default: () => "(1)" })

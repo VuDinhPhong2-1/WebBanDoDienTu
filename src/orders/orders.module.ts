@@ -9,6 +9,15 @@ import { SalePrices } from '../entities/SalePrices';
 import { Discounts } from '../entities/Discounts';
 import { UsersModule } from '../users/users.module';
 import { OrderDetailsService } from '../order-details/order-details.service';
+import { ProductsService } from '../products/products.service';
+import { ProductCategories } from '../entities/ProductCategories';
+import { Categories } from '../entities/Categories';
+import { Brands } from '../entities/Brands';
+import { SalePricesService } from '../sale-prices/sale-prices.service';
+import { ProductImagesService } from '../product-images/product-images.service';
+import { ProductImages } from '../entities/ProductImages';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
+import { PaymentMethods } from '../entities/PaymentMethods';
 
 @Module({
   imports: [
@@ -18,10 +27,24 @@ import { OrderDetailsService } from '../order-details/order-details.service';
       Products,
       SalePrices,
       Discounts,
+      ProductCategories,
+      Categories,
+      Brands,
+      SalePrices,
+      ProductImages,
+      PaymentMethods,
     ]),
     forwardRef(() => UsersModule),
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, OrderDetailsService],
+  providers: [
+    OrdersService,
+    OrderDetailsService,
+    ProductsService,
+    SalePricesService,
+    ProductImagesService,
+    PaymentMethodsService,
+  ],
+  exports: [OrdersService],
 })
 export class OrdersModule {}

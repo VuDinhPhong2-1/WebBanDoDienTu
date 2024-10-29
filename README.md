@@ -58,6 +58,17 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+
+```bash
+### Set up event listening from Stripe
+
+Use the following command to have Stripe CLI listen for webhook events (like `payment_intent.succeeded`, `payment_intent.failed`) and forward them to your application at the `/stripe/webhook` endpoint:
+
+stripe listen --forward-to http://localhost:3001/stripe/webhook
+
+This command ensures Stripe payment events are sent to your backend application for easy testing and handling during development.
+```
+
 ## Support
 
 Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
