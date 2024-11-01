@@ -67,4 +67,7 @@ export class Users {
 
   @Column("nvarchar", { name: "refreshToken", nullable: true, length: 1000 })
   refreshToken: string | null;
+
+  @Column("nvarchar", { name: "profilePicture", nullable: true, length: 255 })
+  profilePicture: string | null;
 }

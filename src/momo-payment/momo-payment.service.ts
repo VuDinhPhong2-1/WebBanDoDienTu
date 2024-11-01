@@ -35,8 +35,6 @@ export class MomoPaymentService {
     if (!amount || amount <= 0) {
       throw new BadRequestException('Invalid amount.');
     }
-    console.log('orderIdURL', orderIdURL);
-
     // Lấy cấu hình MoMo có isActive = true
     const activeConfig = await this.getActiveMomoPayment();
 
@@ -93,13 +91,9 @@ export class MomoPaymentService {
       data: requestBody,
     };
 
-    // In ra requestBody để kiểm tra định dạng
-    console.log('Request Body:', requestBody);
-
     // Gửi yêu cầu đến API và xử lý kết quả
     try {
       const result = await axios.request(options);
-      console.log('Payment Request Successful:', result.data);
       return result.data;
     } catch (error) {
       console.error('Payment Request Failed:', error);

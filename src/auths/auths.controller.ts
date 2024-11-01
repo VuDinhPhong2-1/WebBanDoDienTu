@@ -17,6 +17,8 @@ import { LocalAuthGuard } from '../guards/local-auth.guard';
 import { Role } from '../enums/role.enum';
 import { RolesGuard } from '../guards/roles.guard';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { GoogleAuthGuard } from '../guards/google-auth.guard';
+import { Users } from '../entities/Users';
 
 @Controller('auths')
 export class AuthsController {
@@ -57,6 +59,10 @@ export class AuthsController {
     if (typeof decoded === 'object' && decoded.hasOwnProperty('userId')) {
       await this.authsService.deleteCookieAndToken(decoded['userId']);
       this.authsService.clearRefreshTokenCookie(response);
+
+      response.clearCookie('access_token');
+      response.clearCookie('user');
+
       return { message: 'Logged out successfully' };
     } else {
       throw new BadRequestException('Invalid refresh token');
@@ -86,5 +92,22 @@ export class AuthsController {
   @Get('admin-dashboard')
   getAdminDashboard() {
     return 'This is the admin dashboard';
+  }
+
+  // GOOGLE OAUTH2
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google/login')
+  async handleLogin(@Req() req: Request, @Res() res: Response) {}
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google/redirect')
+  async handleRedirect(@Req() req: Request, @Res() res: Response) {
+    const { access_token, user } =
+      await this.authsService.validateGoogleOAuthUser(req.user, res);
+
+    res.cookie('access_token', access_token);
+    res.cookie('user', JSON.stringify(user));
+    res.redirect('http://localhost:3000/');
   }
 }

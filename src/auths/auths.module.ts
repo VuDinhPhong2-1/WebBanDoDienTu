@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthsService } from './auths.service';
 import { AuthsController } from './auths.controller';
 import { UsersModule } from '../users/users.module';
@@ -8,11 +8,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import ms from 'ms';
 import { LocalStrategy } from './passport/local.strategy';
 import { JwtStrategy } from './passport/jwt.strategy';
+import { GoogleStrategy } from './passport/google.strategy';
+import { SessionSerializer } from './passport/Serializer';
+import { UserRolesModule } from '../user-roles/user-roles.module';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
+    UserRolesModule,
+    RolesModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -25,6 +31,12 @@ import { JwtStrategy } from './passport/jwt.strategy';
     }),
   ],
   controllers: [AuthsController],
-  providers: [AuthsService, LocalStrategy, JwtStrategy],
+  providers: [
+    AuthsService,
+    LocalStrategy,
+    JwtStrategy,
+    GoogleStrategy,
+    SessionSerializer,
+  ],
 })
 export class AuthsModule {}

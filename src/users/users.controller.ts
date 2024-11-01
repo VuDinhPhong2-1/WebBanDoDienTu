@@ -7,6 +7,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { SignupUserDto } from './dto/signup-user.dto';
@@ -29,16 +30,17 @@ export class UsersController {
   // Find all users
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Get()
+  @Get('/all-users')
   findAll(@Query() filterDto: GetUsersFilterDto) {
     return this.usersService.findAll(filterDto);
   }
 
   // Find one user by ID, requires JwtAuthGuard
   @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.usersService.findOne(id);
+  @Get()
+  findOne(@Request() req) {
+    const userId = req.user.userId;
+    return this.usersService.findOneById(userId);
   }
 
   // Remove user by ID, only Admin can perform this action

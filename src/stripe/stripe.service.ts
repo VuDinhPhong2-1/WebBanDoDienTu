@@ -16,10 +16,6 @@ export class StripeService {
     products: { productName: string; unitAmount: number; quantity: number }[],
   ) {
     const lineItems = products.map((product) => {
-      console.log('Product:', product.productName);
-      console.log('Unit Amount:', product.unitAmount);
-      console.log('Quantity:', product.quantity);
-
       return {
         price_data: {
           currency: currency,
@@ -42,8 +38,6 @@ export class StripeService {
         metadata: { orderId: orderId.toString() }, // Thêm metadata vào đây
       },
     });
-
-    console.log('Stripe Session:', session);
     return session;
   }
 

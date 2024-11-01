@@ -10,14 +10,15 @@ import { UpdateOrderDetailsDto } from './dto/update-order-details.dto';
 import { OrderDetails } from '../entities/OrderDetails';
 import { Products } from '../entities/Products';
 import { ProductImagesService } from '../product-images/product-images.service';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class OrderDetailsService {
   constructor(
     @InjectRepository(OrderDetails)
     private orderDetailsRepository: Repository<OrderDetails>,
-
     private readonly productImagesService: ProductImagesService,
+    private readonly productsService: ProductsService,
   ) {}
 
   async create(
@@ -46,31 +47,69 @@ export class OrderDetailsService {
     return await this.orderDetailsRepository.find();
   }
 
-  async findOne(id: number): Promise<OrderDetails> {
-    const orderDetail = await this.orderDetailsRepository.findOne({
-      where: { orderDetailId: id },
+  async findAllByOrderId(orderId: number) {
+    const orderDetails = await this.orderDetailsRepository.find({
+      where: { orderId },
     });
-    if (!orderDetail) {
+
+    if (orderDetails.length === 0) {
       throw new NotFoundException(
-        `Chi tiết đơn hàng với ID ${id} không tồn tại`,
+        `Không tìm thấy chi tiết đơn hàng nào với Order ID ${orderId}`,
       );
     }
-    return orderDetail;
+
+    const productIds = orderDetails.map((od) => od.productId);
+
+    // Lấy danh sách hình ảnh cho các sản phẩm
+    const productImages =
+      await this.productImagesService.findImagesByProductIds(productIds);
+
+    // Lấy danh sách tên sản phẩm cho các sản phẩm
+    const products = await this.productsService.findByIds(productIds);
+
+    // Tạo Map để lưu trữ hình ảnh sản phẩm theo productId
+    const productImagesMap = new Map<number, string[]>();
+    productImages.forEach((image) => {
+      if (!productImagesMap.has(image.productId)) {
+        productImagesMap.set(image.productId, []);
+      }
+      productImagesMap.get(image.productId)?.push(image.imageUrl);
+    });
+
+    // Tạo Map để lưu trữ tên sản phẩm theo productId
+    const productNamesMap = new Map<number, string>();
+    products.forEach((product) => {
+      productNamesMap.set(product.productId, product.name);
+    });
+
+    // Tạo kết quả với hình ảnh và tên sản phẩm
+    const result = orderDetails.map((od) => {
+      const images = productImagesMap.get(od.productId) || [];
+      const productName =
+        productNamesMap.get(od.productId) || 'Unknown Product';
+      return {
+        ...od,
+        images,
+        productName,
+      };
+    });
+
+    return result;
   }
 
-  async update(
-    id: number,
-    updateOrderDetailsDto: UpdateOrderDetailsDto,
-    updatedBy: string,
-  ): Promise<OrderDetails> {
-    const orderDetail = await this.findOne(id);
-    this.orderDetailsRepository.merge(orderDetail, {
-      ...updateOrderDetailsDto,
-      updatedBy,
-      updatedAt: new Date(),
-    });
-    return await this.orderDetailsRepository.save(orderDetail);
-  }
+  // async update(
+  //   id: number,
+  //   updateOrderDetailsDto: UpdateOrderDetailsDto,
+  //   updatedBy: string,
+  // ): Promise<OrderDetails> {
+  //   const orderDetail = await this.findOne(id);
+  //   this.orderDetailsRepository.merge(orderDetail, {
+  //     ...updateOrderDetailsDto,
+  //     updatedBy,
+  //     updatedAt: new Date(),
+  //   });
+  //   return await this.orderDetailsRepository.save(orderDetail);
+  // }
 
   async remove(id: number): Promise<void> {
     const result = await this.orderDetailsRepository.delete(id);
@@ -112,7 +151,7 @@ export class OrderDetailsService {
       if (!groupedImages.has(image.productId)) {
         groupedImages.set(image.productId, []);
       }
-      groupedImages.get(image.productId).push(image.imageUrl); 
+      groupedImages.get(image.productId).push(image.imageUrl);
     });
     const orderDetailsWithImages = orderDetails.map((orderDetail) => ({
       ...orderDetail,

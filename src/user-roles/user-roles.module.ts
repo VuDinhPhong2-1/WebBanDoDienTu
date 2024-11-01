@@ -10,7 +10,7 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserRoles, Users, Roles]),
-    forwardRef(() => UsersModule), // Use forwardRef to prevent circular dependency
+    forwardRef(() => UsersModule),
   ],
   controllers: [UserRolesController],
   providers: [UserRolesService],

@@ -25,6 +25,7 @@ export class OrderOwnerGuard implements CanActivate {
     const orderId = parseInt(request.params.orderId, 10);
     const userRoles = await this.usersService.getUserRoles(user.userId);
     if (isNaN(orderId)) {
+      console.log(orderId)
       throw new NotFoundException('Order ID không hợp lệ');
     }
 

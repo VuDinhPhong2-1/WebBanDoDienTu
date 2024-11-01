@@ -5,6 +5,9 @@ import ms from 'ms';
 import { Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { Users } from '../entities/Users';
+import { Role } from '../enums/role.enum';
+import { RolesService } from '../roles/roles.service';
+import { UserRolesService } from '../user-roles/user-roles.service';
 
 @Injectable()
 export class AuthsService {
@@ -12,6 +15,8 @@ export class AuthsService {
     private usersService: UsersService,
     private configService: ConfigService,
     private jwtService: JwtService,
+    private rolesService: RolesService,
+    private userRolesService: UserRolesService,
   ) {}
 
   // Hàm tạo payload chung
@@ -56,8 +61,8 @@ export class AuthsService {
   }
 
   // Xác thực người dùng
-  async validateUser(username: string, password: string) {
-    const user = await this.usersService.findOneByUsername(username);
+  async validateUser(email: string, password: string) {
+    const user = await this.usersService.findOneByEmail(email); // Tìm người dùng bằng email
     if (!user) {
       throw new BadRequestException('Người dùng không tồn tại.');
     }
@@ -98,7 +103,7 @@ export class AuthsService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: userInfo, // Trả về thông tin user không bao gồm các trường nhạy cảm
+      user: userInfo,
     };
   }
 
@@ -180,5 +185,61 @@ export class AuthsService {
     } catch (error) {
       return false;
     }
+  }
+
+  async validateGoogleOAuthUser(userDetail: any, response: Response) {
+    // Tìm người dùng theo email
+    let user = await this.usersService.findOneByEmail(userDetail.email);
+    if (user) {
+      if (user.profilePicture !== userDetail.profilePicture) {
+        user.profilePicture = userDetail.profilePicture;
+        user = await this.usersService.saveGoogleUser(user);
+
+        // Tải lại user từ cơ sở dữ liệu để đảm bảo profilePicture đã được cập nhật
+        user = await this.usersService.findOneByEmail(user.email);
+      }
+    } else {
+      // Nếu người dùng chưa tồn tại, tạo mới
+      user = await this.usersService.createGoogleUser({
+        email: userDetail.email,
+        fullName: userDetail.displayName,
+        profilePicture: userDetail.profilePicture,
+        isActive: true,
+      });
+
+      const defaultRole = Role.CUSTOMER;
+      const role = await this.rolesService.findByRoleName(defaultRole);
+      await this.userRolesService.assignRoleToUser(user.userId, role.roleId);
+
+      // Tải lại user từ cơ sở dữ liệu để đảm bảo profilePicture đã được lưu đúng cách
+      user = await this.usersService.findOneByEmail(user.email);
+    }
+    // Tạo payload cho JWT
+    const payload = {
+      userId: user.userId,
+      email: user.email,
+      roles: (await this.usersService.getUserRoles(user.userId)).map(
+        (role) => role.roleName,
+      ),
+    };
+
+    // Tạo access token
+    const access_token = this.jwtService.sign(payload);
+    const refresh_token = this.createRefreshToken(payload);
+    this.setRefreshTokenCookie(response, refresh_token);
+
+    // Xóa thông tin không cần thiết trước khi trả về
+    const {
+      passwordHash,
+      createdBy,
+      updatedBy,
+      createdAt,
+      updatedAt,
+      ...userInfo
+    } = user;
+    return {
+      access_token,
+      user: userInfo,
+    };
   }
 }

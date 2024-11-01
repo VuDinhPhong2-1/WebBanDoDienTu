@@ -18,6 +18,7 @@ import { ProductImagesService } from '../product-images/product-images.service';
 import { ProductImages } from '../entities/ProductImages';
 import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 import { PaymentMethods } from '../entities/PaymentMethods';
+import { MailerModule } from '../mailer/mailer.module'; // Import MailerModule
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { PaymentMethods } from '../entities/PaymentMethods';
       PaymentMethods,
     ]),
     forwardRef(() => UsersModule),
+    MailerModule,
   ],
   controllers: [OrdersController],
   providers: [

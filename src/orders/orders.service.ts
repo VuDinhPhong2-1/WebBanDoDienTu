@@ -19,6 +19,7 @@ import { ProductsService } from '../products/products.service';
 import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 import { PaymentStatus } from '../enums/paymentStatus.enum';
 import { OrderStatus } from '../enums/orderStatus.enum';
+import { MailerService } from '../mailer/mailer.service';
 
 @Injectable()
 export class OrdersService {
@@ -26,7 +27,7 @@ export class OrdersService {
     @InjectRepository(Orders)
     private ordersRepository: Repository<Orders>,
     private orderDetailsService: OrderDetailsService,
-    private connection: Connection,
+    private readonly mailService: MailerService,
     private readonly productsService: ProductsService,
     private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
@@ -126,6 +127,15 @@ export class OrdersService {
 
       // Commit transaction nếu không có lỗi
       await queryRunner.commitTransaction();
+      console.log('user.email: ', user.email);
+      // Gọi MailService để gửi email xác nhận
+      await this.mailService.sendOrderConfirmationEmail(user.email, {
+        orderId: savedOrder.orderId,
+        customerName: createOrderDto.customerName,
+        totalAmount: totalAmount,
+        orderDate: savedOrder.orderDate,
+      });
+
       return savedOrder;
     } catch (error) {
       // Rollback nếu có lỗi
@@ -153,7 +163,13 @@ export class OrdersService {
     }
     return order;
   }
-
+  async findAllByUser(userId: number): Promise<Orders[]> {
+    const orders = await this.ordersRepository.find({
+      where: { userId: userId },
+    });
+    if (!orders) new NotFoundException('Bạn chưa có đơn hàng nào!');
+    return orders;
+  }
   async update(
     id: number,
     updateOrderDto: UpdateOrderDto,
@@ -206,6 +222,5 @@ export class OrdersService {
 
     order.paymentStatus = status;
     await this.ordersRepository.save(order);
-    console.log(`Updated Order ID ${orderId} to payment status: ${status}`);
   }
 }

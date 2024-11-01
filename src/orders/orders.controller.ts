@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -39,7 +40,13 @@ export class OrdersController {
   findAll() {
     return this.ordersService.findAll();
   }
-
+  @UseGuards(JwtAuthGuard)
+  @Get('user-orders')
+  findAllByUser(@Request() req) {
+    const userId = req.user.userId;
+    return this.ordersService.findAllByUser(userId);
+  }
+  
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')

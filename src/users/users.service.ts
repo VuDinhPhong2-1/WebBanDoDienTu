@@ -156,7 +156,6 @@ export class UsersService {
     await this.usersRepository.remove(user);
   }
 
-  // Find user by email
   async findOneByUsername(username: string) {
     try {
       const user = await this.usersRepository.findOne({
@@ -168,6 +167,29 @@ export class UsersService {
     }
   }
 
+  async findOneByEmail(email: string) {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { email: email },
+      });
+      return user;
+    } catch (error) {
+      throw new Error(`Failed to find user: ${error.message}`);
+    }
+  }
+
+  async findOneById(id: number) {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { userId: id },
+      });
+      if (!user) new NotFoundException('Không tồn tại user');
+      const roles = await this.getUserRoles(user.userId);
+      return { user, roles };
+    } catch (error) {
+      throw new Error(`Failed to find user: ${error.message}`);
+    }
+  }
   // Update user's refresh token
   async updateUserRefreshToken(refreshToken: string, userId: number) {
     try {
@@ -206,5 +228,13 @@ export class UsersService {
       roleName: userRole.role_RoleName,
       description: userRole.role_Description,
     }));
+  }
+  async createGoogleUser(userData: Partial<Users>): Promise<Users> {
+    const user = this.usersRepository.create(userData);
+    return user;
+  }
+
+  async saveGoogleUser(user: Users): Promise<Users> {
+    return await this.usersRepository.save(user);
   }
 }

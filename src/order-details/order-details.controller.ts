@@ -15,9 +15,8 @@ import { Roles, User } from '../decorators/customize';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Role } from '../enums/role.enum';
-import { Users } from '../entities/Users';
-import { Products } from '../entities/Products';
 import { OrderOwnerGuard } from '../guards/order-owner.guard';
+
 @Controller('order-details')
 @Roles(Role.ADMIN, Role.CUSTOMER)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,37 +34,38 @@ export class OrderDetailsController {
   //   );
   // }
 
-  @Get()
-  findAll() {
-    return this.orderDetailsService.findAll();
+  // @Get('all-details')
+  // findAll() {
+  //   return this.orderDetailsService.findAll();
+  // }
+
+  @UseGuards(OrderOwnerGuard)
+  @Get(':orderId')
+  findOne(@Param('orderId') id: number) {
+    return this.orderDetailsService.findAllByOrderId(id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.orderDetailsService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateOrderDetailsDto: UpdateOrderDetailsDto,
-    @User() user: Users,
-  ) {
-    return this.orderDetailsService.update(
-      +id,
-      updateOrderDetailsDto,
-      user.username,
-    );
-  }
+  // @Patch(':id')
+  // update(
+  //   @Param('id') id: string,
+  //   @Body() updateOrderDetailsDto: UpdateOrderDetailsDto,
+  //   @User() user: Users,
+  // ) {
+  //   return this.orderDetailsService.update(
+  //     +id,
+  //     updateOrderDetailsDto,
+  //     user.username,
+  //   );
+  // }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.orderDetailsService.remove(+id);
   }
 
-  @UseGuards(OrderOwnerGuard)
-  @Get('order/:orderId/products')
-  async getProductsByOrderId(@Param('orderId') orderId: number) {
-    return this.orderDetailsService.getProductsByOrderId(orderId);
-  }
+  // @UseGuards(OrderOwnerGuard)
+  // @Get('order/:orderId/products')
+  // async getProductsByOrderId(@Param('orderId') orderId: number) {
+  //   return this.orderDetailsService.getProductsByOrderId(orderId);
+  // }
 }

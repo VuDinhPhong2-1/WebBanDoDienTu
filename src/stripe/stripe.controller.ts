@@ -51,8 +51,6 @@ export class StripeController {
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
-        console.log('Event Data:', event.data.object);
-        console.log('Order ID from Metadata:', paymentIntent.metadata.orderId); // Kiểm tra orderId
         const orderId = paymentIntent.metadata.orderId;
         await this.ordersService.updatePaymentOrderStatus(
           orderId,
@@ -62,8 +60,6 @@ export class StripeController {
 
       case 'payment_intent.payment_failed':
         const failedIntent = event.data.object;
-        console.log('Event Data:', event.data.object);
-        console.log('Order ID from Metadata:', failedIntent.metadata.orderId); // Kiểm tra orderId
         const failedOrderId = failedIntent.metadata.orderId;
         await this.ordersService.updatePaymentOrderStatus(
           failedOrderId,
