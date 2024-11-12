@@ -27,6 +27,14 @@ export class OrdersController {
     private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
 
+
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('latest')
+  async findLatestOrders() {
+    return this.ordersService.findLatestOrders();
+  }
+
   @Roles(Role.CUSTOMER, Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
@@ -46,7 +54,7 @@ export class OrdersController {
     const userId = req.user.userId;
     return this.ordersService.findAllByUser(userId);
   }
-  
+
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id')

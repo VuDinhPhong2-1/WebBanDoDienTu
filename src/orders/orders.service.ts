@@ -151,7 +151,9 @@ export class OrdersService {
   }
 
   async findAll(): Promise<Orders[]> {
-    return await this.ordersRepository.find();
+    const orders = await this.ordersRepository.find();
+    if (!orders) new NotFoundException('Chưa có đơn hàng nào!');
+    return orders;
   }
 
   async findOne(id: number): Promise<Orders> {
@@ -222,5 +224,28 @@ export class OrdersService {
 
     order.paymentStatus = status;
     await this.ordersRepository.save(order);
+  }
+  async findLatestOrders(limit: number = 10): Promise<any[]> {
+    const orders = await this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('Users', 'user', 'user.userId = order.userId') // Manually join with Users table
+      .select([
+        'order.orderId',
+        'order.orderDate',
+        'order.totalAmount',
+        'order.status',
+        'user.fullName',
+        'user.phone',
+        'order.paymentStatus'
+      ])
+      .orderBy('order.orderDate', 'DESC')
+      .take(limit) // Limit the number of results
+      .getMany();
+
+    if (!orders || orders.length === 0) {
+      throw new NotFoundException('Không có đơn hàng mới nào!');
+    }
+
+    return orders;
   }
 }

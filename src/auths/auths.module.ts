@@ -12,6 +12,10 @@ import { GoogleStrategy } from './passport/google.strategy';
 import { SessionSerializer } from './passport/Serializer';
 import { UserRolesModule } from '../user-roles/user-roles.module';
 import { RolesModule } from '../roles/roles.module';
+import { UsersService } from '../users/users.service';
+import { Users } from '../entities/Users';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserRoles } from '../entities/UserRoles';
 
 @Module({
   imports: [
@@ -29,6 +33,7 @@ import { RolesModule } from '../roles/roles.module';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([Users, UserRoles]),
   ],
   controllers: [AuthsController],
   providers: [
@@ -37,6 +42,7 @@ import { RolesModule } from '../roles/roles.module';
     JwtStrategy,
     GoogleStrategy,
     SessionSerializer,
+    UsersService,
   ],
 })
 export class AuthsModule {}

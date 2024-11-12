@@ -19,10 +19,15 @@ import { RolesGuard } from '../guards/roles.guard';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { GoogleAuthGuard } from '../guards/google-auth.guard';
 import { Users } from '../entities/Users';
+import { SignupUserDto } from '../users/dto/signup-user.dto';
+import { UsersService } from '../users/users.service';
 
 @Controller('auths')
 export class AuthsController {
-  constructor(private readonly authsService: AuthsService) {}
+  constructor(
+    private readonly authsService: AuthsService,
+    private readonly usersService: UsersService,
+  ) {}
 
   // Login API
   @UseGuards(LocalAuthGuard)
@@ -52,6 +57,7 @@ export class AuthsController {
   ) {
     const refresh_token = request.cookies['refresh_token'];
     if (!refresh_token) {
+      console.log(refresh_token)
       throw new BadRequestException('No refresh token found');
     }
 
@@ -91,7 +97,7 @@ export class AuthsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('admin-dashboard')
   getAdminDashboard() {
-    return 'This is the admin dashboard';
+    return true;
   }
 
   // GOOGLE OAUTH2
@@ -109,5 +115,11 @@ export class AuthsController {
     res.cookie('access_token', access_token);
     res.cookie('user', JSON.stringify(user));
     res.redirect('http://localhost:3000/');
+  }
+
+  // Signup user - roleId is fixed to 3 (Viewer) by default
+  @Post('signup')
+  signup(@Body() signupUserDto: SignupUserDto) {
+    return this.usersService.signup(signupUserDto);
   }
 }

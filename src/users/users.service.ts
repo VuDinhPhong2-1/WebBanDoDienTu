@@ -37,7 +37,7 @@ export class UsersService {
 
   // Sign up new user and assign default role (roleId = 3 for Viewer)
   async signup(signupUserDto: SignupUserDto): Promise<Users> {
-    const { username, password, email, phone } = signupUserDto;
+    const { fullName, password, email, phone } = signupUserDto;
 
     // Check if email already exists
     const isExistEmail = await this.usersRepository.findOne({
@@ -64,10 +64,10 @@ export class UsersService {
 
     // Create new user
     const newUser = this.usersRepository.create({
-      username,
+      fullName,
       passwordHash: hashedPassword,
       email,
-      phone, // Add phone field here
+      phone, 
     });
 
     const savedUser = await this.usersRepository.save(newUser);

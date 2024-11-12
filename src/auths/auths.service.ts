@@ -227,7 +227,7 @@ export class AuthsService {
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.createRefreshToken(payload);
     this.setRefreshTokenCookie(response, refresh_token);
-
+    await this.usersService.updateUserRefreshToken(refresh_token, user.userId);
     // Xóa thông tin không cần thiết trước khi trả về
     const {
       passwordHash,

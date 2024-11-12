@@ -21,12 +21,6 @@ import { RolesGuard } from '../guards/roles.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // Signup user - roleId is fixed to 3 (Viewer) by default
-  @Post('signup')
-  signup(@Body() signupUserDto: SignupUserDto) {
-    return this.usersService.signup(signupUserDto);
-  }
-
   // Find all users
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)

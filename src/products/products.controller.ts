@@ -135,7 +135,25 @@ export class ProductsController {
       user,
     );
   }
+  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('top-selling')
+  async getTopSellingProducts(
+    @Query('year') year: number,
+    @Query('month') month?: number,
+    @Query('day') day?: number,
+  ) {
+    if (!year) {
+      throw new BadRequestException('Year is required');
+    }
 
+    const topProducts = await this.productsService.getTopSellingProducts(
+      year,
+      month || null,
+      day || null,
+    );
+    return topProducts;
+  }
   // API lấy thông tin chi tiết của một sản phẩm
   // Tham số: 'id' là ID của sản phẩm.
   @Get(':id')

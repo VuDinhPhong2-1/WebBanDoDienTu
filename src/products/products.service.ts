@@ -733,4 +733,35 @@ export class ProductsService {
 
     await queryRunner.manager.save(product);
   }
+
+  async getTopSellingProducts(
+    year: number,
+    month: number | null = null,
+    day: number | null = null,
+  ) {
+    const products = await this.productsRepository.query(
+      `
+      SELECT TOP 4 
+          P.Name,
+          SUM(OD.Quantity) AS TotalQuantitySold
+      FROM 
+          Orders O
+      JOIN 
+          OrderDetails OD ON O.OrderID = OD.OrderID
+      JOIN 
+          Products P ON OD.ProductID = P.ProductID
+      WHERE 
+          YEAR(O.OrderDate) = @0
+          AND (@1 IS NULL OR MONTH(O.OrderDate) = @1)
+          AND (@2 IS NULL OR DAY(O.OrderDate) = @2)
+      GROUP BY 
+          P.Name
+      ORDER BY 
+          TotalQuantitySold DESC;
+      `,
+      [year, month, day],
+    );
+
+    return products;
+  }
 }

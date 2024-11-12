@@ -11,7 +11,7 @@ export class SignupUserDto {
   @IsString({ message: 'Tên người dùng phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'Tên người dùng là bắt buộc' })
   @Length(3, 100, { message: 'Tên người dùng phải có từ 3 đến 100 ký tự' })
-  username: string;
+  fullName: string;
 
   @IsString({ message: 'Mật khẩu phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'Mật khẩu là bắt buộc' })
