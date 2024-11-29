@@ -128,7 +128,7 @@ export class AuthsService {
         );
 
         return {
-          access_token: this.jwtService.sign(payload),
+          access_token: await this.jwtService.sign(payload),
           refresh_token: new_refresh_token,
         };
       } else {

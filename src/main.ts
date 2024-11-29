@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import session from 'express-session';
-import passport from 'passport';
+import passport = require('passport');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

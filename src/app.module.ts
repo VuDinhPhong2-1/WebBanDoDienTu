@@ -20,6 +20,9 @@ import { ProductImagesModule } from './product-images/product-images.module';
 import { MomoPaymentModule } from './momo-payment/momo-payment.module';
 import { StripeModule } from './stripe/stripe.module';
 import { MailerModule } from './mailer/mailer.module';
+import { UploadModule } from './upload/upload.module';
+import { TempImagesModule } from './temp-images/temp-images.module';
+import { CleanupModule } from './cleanup/cleanup.module';
 
 @Module({
   imports: [
@@ -72,6 +75,9 @@ import { MailerModule } from './mailer/mailer.module';
     MomoPaymentModule,
     StripeModule,
     MailerModule,
+    UploadModule,
+    TempImagesModule,
+    CleanupModule,
   ],
 })
 export class AppModule {}

@@ -150,10 +150,50 @@ export class OrdersService {
     }
   }
 
-  async findAll(): Promise<Orders[]> {
-    const orders = await this.ordersRepository.find();
-    if (!orders) new NotFoundException('Chưa có đơn hàng nào!');
-    return orders;
+  async findAll(
+    page: number,
+    orderId?: number,
+  ): Promise<{
+    result: Orders[];
+    total: number;
+    currentPage: number;
+    totalPages: number;
+  }> {
+    console.log('orderId', orderId);
+    const limit = 10; // Số lượng đơn hàng mỗi trang
+    const offset = (page - 1) * limit;
+
+    const query = this.ordersRepository.createQueryBuilder('order');
+
+    // Kiểm tra và chỉ thêm điều kiện nếu orderId hợp lệ
+    if (orderId && !isNaN(orderId)) {
+      query.where('orderId = :orderId', { orderId });
+    }
+
+    // Phân trang: sử dụng OFFSET và LIMIT cho SQL Server
+    query.skip(offset).take(limit);
+
+    try {
+      // Lấy dữ liệu và tổng số đơn hàng
+      const [orders, total] = await query.getManyAndCount();
+
+      if (!orders.length) {
+        throw new NotFoundException('Chưa có đơn hàng nào!');
+      }
+
+      // Tính toán số trang
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        result: orders,
+        total,
+        currentPage: page,
+        totalPages,
+      };
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      throw error;
+    }
   }
 
   async findOne(id: number): Promise<Orders> {
@@ -236,7 +276,7 @@ export class OrdersService {
         'order.status',
         'user.fullName',
         'user.phone',
-        'order.paymentStatus'
+        'order.paymentStatus',
       ])
       .orderBy('order.orderDate', 'DESC')
       .take(limit) // Limit the number of results

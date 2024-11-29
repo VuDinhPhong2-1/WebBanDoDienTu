@@ -19,6 +19,8 @@ import { calculatePrices } from '../utils/price-calculation';
 import { ProductImagesService } from '../product-images/product-images.service';
 import { ProductImages } from '../entities/ProductImages';
 import { Brands } from '../entities/Brands';
+import { TempImagesService } from '../temp-images/temp-images.service';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class ProductsService {
@@ -44,14 +46,17 @@ export class ProductsService {
     private readonly salePricesService: SalePricesService,
 
     private readonly productImagesService: ProductImagesService,
+    private readonly tempImagesService: TempImagesService,
+    private readonly uploadService: UploadService,
   ) {}
 
   // Tạo mới sản phẩm với giá bán và liên kết danh mục
   async create(
     createProductDto: CreateProductWithSalePriceAndCategoriesDto,
     user: Users,
+    images: Express.Multer.File[], // Chấp nhận mảng file
   ): Promise<Products> {
-    const { product, salePrice, categoryIds, images } = createProductDto;
+    const { product, salePrice, categoryId } = createProductDto;
 
     const queryRunner =
       this.productsRepository.manager.connection.createQueryRunner();
@@ -66,12 +71,19 @@ export class ProductsService {
       });
       const savedProduct = await queryRunner.manager.save(newProduct);
 
-      // Lưu ảnh sản phẩm nếu có
-      await this.productImagesService.createImages(
-        savedProduct.productId,
-        images,
-        user,
-      );
+      // Upload và lưu ảnh sản phẩm nếu có
+      if (images && images.length > 0) {
+        const uploadPromises = images.map((image) =>
+          this.uploadService.uploadFile(image),
+        );
+        const uploadedImages = await Promise.all(uploadPromises);
+
+        await this.productImagesService.createImages(
+          savedProduct.productId,
+          uploadedImages.map((image) => image.url), // Truyền các URL ảnh đã upload
+          user,
+        );
+      }
 
       // Tạo giá bán cho sản phẩm
       const newSalePrice: CreateSalePriceDto = {
@@ -81,15 +93,13 @@ export class ProductsService {
       await this.salePricesService.create(newSalePrice, queryRunner);
 
       // Tạo liên kết với các danh mục
-      if (categoryIds?.length) {
-        const productCategories = categoryIds.map((categoryId) =>
-          this.productCategoriesRepository.create({
-            productId: savedProduct.productId,
-            categoryId,
-            createdBy: user.userId,
-          }),
-        );
-        await queryRunner.manager.save(productCategories);
+      if (categoryId) {
+        const productCategory = this.productCategoriesRepository.create({
+          productId: savedProduct.productId,
+          categoryId, // Sử dụng categoryId thay vì lặp qua mảng
+          createdBy: user.userId,
+        });
+        await queryRunner.manager.save(productCategory);
       }
 
       await queryRunner.commitTransaction();
@@ -103,12 +113,14 @@ export class ProductsService {
   }
 
   // Cập nhật sản phẩm với giá bán và liên kết danh mục
+  // Cập nhật sản phẩm với giá bán và liên kết danh mục
   async update(
     productId: number,
     updateProductDto: UpdateProductWithSalePriceAndCategoriesDto,
     user: Users,
+    newImages: Express.Multer.File[],
   ): Promise<Products> {
-    const { product, salePrice, categoryIds, images } = updateProductDto;
+    const { product, salePrice, categoryIds, deleteImages } = updateProductDto;
 
     const queryRunner =
       this.productsRepository.manager.connection.createQueryRunner();
@@ -127,18 +139,6 @@ export class ProductsService {
       // Cập nhật thông tin sản phẩm
       Object.assign(existingProduct, product, { updatedBy: user.userId });
       const updatedProduct = await queryRunner.manager.save(existingProduct);
-
-      // Cập nhật ảnh sản phẩm
-      if (images) {
-        // Xóa các ảnh cũ
-        await this.productImagesService.removeImagesByProductId(productId);
-        // Thêm ảnh mới
-        await this.productImagesService.createImages(
-          updatedProduct.productId,
-          images,
-          user,
-        );
-      }
 
       // Cập nhật giá bán nếu có
       if (salePrice) {
@@ -167,6 +167,28 @@ export class ProductsService {
         }
       }
 
+      // Xóa các bản ghi có URL trong deleteImages (nếu có)
+      if (deleteImages && deleteImages.length > 0) {
+        await queryRunner.manager.delete(ProductImages, {
+          imageUrl: In(deleteImages),
+        });
+      }
+
+      // Upload và lưu ảnh mới (newImages)
+      if (newImages && newImages.length > 0) {
+        const uploadPromises = newImages.map((image) =>
+          this.uploadService.uploadFile(image),
+        );
+        const uploadedImages = await Promise.all(uploadPromises);
+
+        // Lưu các ảnh vào bảng ProductImages
+        await this.productImagesService.createImages(
+          updatedProduct.productId,
+          uploadedImages.map((image) => image.url), // Truyền các URL ảnh đã upload
+          user,
+        );
+      }
+
       await queryRunner.commitTransaction();
       return updatedProduct;
     } catch (error) {
@@ -183,49 +205,54 @@ export class ProductsService {
   async findAll(page: number = 1, categoryNames?: string[]) {
     try {
       const limit = 10;
+      const offset = (page - 1) * limit;
+
       const queryRunner =
         this.productsRepository.manager.connection.createQueryRunner();
       await queryRunner.connect();
       let products = [];
+
       if (categoryNames && categoryNames.length > 0) {
         // Tạo các placeholder tương ứng với số lượng phần tử trong mảng
         const placeholders = categoryNames
           .map((_, index) => `@${index}`)
           .join(', ');
 
-        // Tạo câu truy vấn sử dụng các placeholder
         products = await queryRunner.query(
           `
-          SELECT 
-          p.ProductID AS "productId", 
-          p.Name, 
-          p.Description, 
-          p.Quantity, 
-          p.BrandID, 
-          p.discountId, 
-          p.createdBy, 
-          p.updatedBy, 
-          p.createdAt, 
-          p.updatedAt, 
-          p.avatar_url
-        FROM Products p
-        JOIN ProductCategories pc ON p.ProductID = pc.ProductID
-        JOIN Categories c ON pc.CategoryID = c.CategoryID
-        WHERE c.Name IN (${placeholders});
-          `,
+            SELECT 
+              p.productID AS "productId", 
+              p.name, 
+              p.description, 
+              p.quantity, 
+              p.brandID, 
+              p.discountId, 
+              p.createdBy, 
+              p.updatedBy, 
+              p.createdAt, 
+              p.updatedAt
+            FROM Products p
+            JOIN ProductCategories pc ON p.ProductID = pc.ProductID
+            JOIN Categories c ON pc.CategoryID = c.CategoryID
+            WHERE c.Name IN (${placeholders})
+            ORDER BY p.ProductID  
+            OFFSET ${Number(offset)} ROWS
+            FETCH NEXT ${limit} ROWS ONLY;
+            `,
           categoryNames,
         );
       } else {
-        products = await this.productsRepository.find();
+        products = await this.productsRepository.find({
+          take: limit,
+          skip: Number(offset),
+        });
       }
-      // tạo mảng mới lấy productIds
+
       const productIds = products.map((p) => p.productId);
 
-      // lấy ra sale price của sản phẩm
       const salePrices = await this.salePricesRepository.find({
         where: { productId: In(productIds) },
       });
-      // Gom nhóm salePrice theo productID
       const salePriceMap = new Map<number, SalePrices[]>();
       salePrices.forEach((sp) => {
         if (!salePriceMap.has(sp.productId)) {
@@ -233,6 +260,7 @@ export class ProductsService {
         }
         salePriceMap.get(sp.productId)?.push(sp);
       });
+
       const discounts = await this.discountsRepository.find({
         where: {
           discountId: In(products.map((p) => p.discountId).filter(Boolean)),
@@ -277,7 +305,120 @@ export class ProductsService {
           images,
         };
       });
+
       return result;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async adminFindAll(
+    page: number = 1,
+    productName: string = '',
+    categoryName: string = '',
+  ) {
+    try {
+      const limit = 10; // Số sản phẩm mỗi trang
+      const offset = (page - 1) * limit;
+
+      // Tạo query builder cho Products
+      const queryBuilder =
+        this.productsRepository.createQueryBuilder('product');
+
+      // Nối với bảng ProductCategories và Categories nếu có categoryName
+      if (categoryName) {
+        queryBuilder
+          .innerJoin(
+            ProductCategories,
+            'productCategory',
+            'product.productId = productCategory.productId',
+          )
+          .innerJoin(
+            Categories,
+            'category',
+            'productCategory.categoryId = category.categoryId',
+          )
+          .andWhere('category.name LIKE :categoryName', {
+            categoryName: `%${categoryName}%`,
+          });
+      }
+
+      // Lọc theo tên sản phẩm nếu có productName
+      if (productName) {
+        queryBuilder.andWhere('product.name LIKE :productName', {
+          productName: `%${productName}%`,
+        });
+      }
+
+      // Phân trang: skip + take
+      queryBuilder.offset(offset).limit(limit);
+
+      // Lấy dữ liệu
+      const [products, total] = await queryBuilder.getManyAndCount();
+
+      const productIds = products.map((p) => p.productId);
+
+      const salePrices = await this.salePricesRepository.find({
+        where: { productId: In(productIds) },
+      });
+      const salePriceMap = new Map<number, SalePrices[]>();
+      salePrices.forEach((sp) => {
+        if (!salePriceMap.has(sp.productId)) {
+          salePriceMap.set(sp.productId, []);
+        }
+        salePriceMap.get(sp.productId)?.push(sp);
+      });
+
+      const discounts = await this.discountsRepository.find({
+        where: {
+          discountId: In(products.map((p) => p.discountId).filter(Boolean)),
+        },
+      });
+
+      const discountMap = new Map<number, Discounts>();
+      discounts.forEach((discount) => {
+        discountMap.set(discount.discountId, discount);
+      });
+
+      const productImages = await this.productsRepository.manager.find(
+        ProductImages,
+        {
+          where: { productId: In(productIds) },
+        },
+      );
+
+      const productImagesMap = new Map<number, string[]>();
+      productImages.forEach((image) => {
+        if (!productImagesMap.has(image.productId)) {
+          productImagesMap.set(image.productId, []);
+        }
+        productImagesMap.get(image.productId)?.push(image.imageUrl);
+      });
+
+      const now = new Date();
+
+      const result = products.map((product) => {
+        const prices = calculatePrices(
+          product,
+          salePriceMap.get(product.productId) || [],
+          discountMap,
+          now,
+        );
+
+        const images = productImagesMap.get(product.productId) || [];
+
+        return {
+          ...product,
+          ...prices,
+          images,
+        };
+      });
+      return {
+        result,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+      };
     } catch (error) {
       throw new BadRequestException(error.message);
     }
@@ -293,6 +434,7 @@ export class ProductsService {
       if (!product) {
         throw new NotFoundException('Không tìm thấy sản phẩm');
       }
+
       const brandName = await this.brandsRepository.findOne({
         where: { brandId: product.brandId },
         select: ['name'],
@@ -304,6 +446,7 @@ export class ProductsService {
 
       const now = new Date();
 
+      // Lấy các giá bán liên quan đến sản phẩm
       const salePrices = await this.salePricesRepository.find({
         where: { productId },
       });
@@ -321,6 +464,13 @@ export class ProductsService {
       }
 
       const prices = calculatePrices(product, salePrices, discountMap, now);
+
+      // Trích xuất dữ liệu salePrices
+      const salePriceDetails = salePrices.map((salePrice) => ({
+        startDate: salePrice.startDate,
+        endDate: salePrice.endDate,
+        applyDate: salePrice.applyDate,
+      }));
 
       // Lấy thông tin các danh mục liên quan đến sản phẩm
       const productCategories = await this.productCategoriesRepository.find({
@@ -347,6 +497,7 @@ export class ProductsService {
         categories: productCategoriesList,
         images: productImages,
         brandName,
+        salePrices: salePriceDetails, // Thêm danh sách salePrices vào kết quả trả về
       };
     } catch (error) {
       throw new BadRequestException(error.message);

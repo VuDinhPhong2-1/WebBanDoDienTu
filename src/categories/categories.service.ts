@@ -143,7 +143,7 @@ export class CategoriesService {
     });
     if (!categoryIdLevel1)
       throw new NotFoundException(
-        `Không thể tìm thấy categoryvới tên ${categoryName} không tồn tại.`,
+        `Không thể tìm thấy category với tên ${categoryName} không tồn tại.`,
       );
 
     const categoriesIdLevel2 = await this.categoriesRepository.find({

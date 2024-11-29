@@ -19,6 +19,10 @@ import { ProductImages } from '../entities/ProductImages';
 import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 import { PaymentMethods } from '../entities/PaymentMethods';
 import { MailerModule } from '../mailer/mailer.module'; // Import MailerModule
+import { TempImagesService } from '../temp-images/temp-images.service';
+import { TempImages } from '../entities/TempImages';
+import { UploadService } from '../upload/upload.service';
+import { CloudinaryService } from '../upload/cloudinary.config';
 
 @Module({
   imports: [
@@ -34,6 +38,7 @@ import { MailerModule } from '../mailer/mailer.module'; // Import MailerModule
       SalePrices,
       ProductImages,
       PaymentMethods,
+      TempImages,
     ]),
     forwardRef(() => UsersModule),
     MailerModule,
@@ -46,6 +51,9 @@ import { MailerModule } from '../mailer/mailer.module'; // Import MailerModule
     SalePricesService,
     ProductImagesService,
     PaymentMethodsService,
+    TempImagesService,
+    UploadService,
+    CloudinaryService
   ],
   exports: [OrdersService],
 })

@@ -43,10 +43,15 @@ export class AuthsController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const refresh_token = request.cookies['refresh_token'];
+    console.log('refresh_token', refresh_token);
     if (!refresh_token) {
       throw new BadRequestException('No refresh token found');
     }
-    return this.authsService.processNewToken(refresh_token, response);
+
+    const test = await this.authsService.processNewToken(refresh_token, response);
+    console.log(test);
+
+    return test;
   }
 
   // Logout API
@@ -57,7 +62,7 @@ export class AuthsController {
   ) {
     const refresh_token = request.cookies['refresh_token'];
     if (!refresh_token) {
-      console.log(refresh_token)
+      console.log(refresh_token);
       throw new BadRequestException('No refresh token found');
     }
 

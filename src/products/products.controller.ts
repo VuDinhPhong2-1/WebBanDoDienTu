@@ -15,6 +15,9 @@ import {
   Query,
   BadRequestException,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductWithSalePriceAndCategoriesDto } from './dto/create-product-with-sale-price-and-categories.dto';
@@ -24,6 +27,7 @@ import { Roles, User } from '../decorators/customize';
 import { Role } from '../enums/role.enum';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('products')
 export class ProductsController {
@@ -82,20 +86,40 @@ export class ProductsController {
 
     return products; // Gọi service để xử lý logic
   }
-
+  // @Get('/find-all')
+  // async adminGetAllProducts(@Query('page') page?: number) {
+  //   return this.productsService.adminGetAllProducts(page, categoryNamesArray);
+  // }
   @Get('/')
   async findAll(
-    @Query('page') page?: number,
+    @Query('page') page?: string,
     @Query('categories') categories?: string,
   ) {
     let categoryNamesArray: string[] = [];
+
+    const pageNumber = Number(page) || 1;
 
     if (categories) {
       categoryNamesArray = categories
         .split(',')
         .map((category) => decodeURIComponent(category));
     }
-    return this.productsService.findAll(page, categoryNamesArray);
+
+    return this.productsService.findAll(pageNumber, categoryNamesArray);
+  }
+
+  @Get('/admin/find-all')
+  async adminFindAll(
+    @Query('page') page?: string, // Nhận `page` dưới dạng string để dễ ép kiểu
+    @Query('productName') productName?: string,
+    @Query('categoryName') categoryName?: string,
+  ) {
+    const numericPage = Number(page) || 1; // Ép kiểu thành số và đặt giá trị mặc định
+    return this.productsService.adminFindAll(
+      numericPage,
+      productName,
+      categoryName,
+    );
   }
 
   // API tạo sản phẩm mới (chỉ dành cho Admin)
@@ -103,17 +127,32 @@ export class ProductsController {
   // Để bảo mật, yêu cầu người dùng có vai trò 'ADMIN' và phải được xác thực bằng JWT.
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Post()
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @UseInterceptors(FilesInterceptor('images', 10))
+  @Post('/')
   async create(
-    @Body()
-    createProductWithSalePriceAndCategoriesDto: CreateProductWithSalePriceAndCategoriesDto,
+    @Body() body: any,
     @User() user: Users,
+    @UploadedFiles() images: Express.Multer.File[],
   ) {
-    return this.productsService.create(
-      createProductWithSalePriceAndCategoriesDto,
-      user,
-    );
+    try {
+      const product = JSON.parse(body.product);
+      const salePrice = JSON.parse(body.salePrice);
+      const categoryId = JSON.parse(body.categoryId);
+
+      const createProductWithSalePriceAndCategoriesDto = {
+        product,
+        salePrice,
+        categoryId,
+      };
+
+      return this.productsService.create(
+        createProductWithSalePriceAndCategoriesDto,
+        user,
+        images,
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   // API cập nhật thông tin sản phẩm (chỉ dành cho Admin)
@@ -122,19 +161,33 @@ export class ProductsController {
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Put(':id')
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @UseInterceptors(FilesInterceptor('newImages', 10))
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body()
-    updateProductWithSalePriceAndCategoriesDto: UpdateProductWithSalePriceAndCategoriesDto,
+    @Body() body: any,
     @User() user: Users,
+    @UploadedFiles() newImages: Express.Multer.File[],
   ) {
-    return this.productsService.update(
-      id,
-      updateProductWithSalePriceAndCategoriesDto,
-      user,
-    );
+    try {
+      const product = JSON.parse(body.product);
+      const salePrice = JSON.parse(body.salePrice);
+      const categoryId = JSON.parse(body.categoryId);
+      const deleteImages = JSON.parse(body.deleteImages);
+
+      const updateProductDto = {
+        product,
+        salePrice,
+        categoryId,
+        deleteImages,
+      };
+      console.log('updateProductDto:', updateProductDto);
+      await this.productsService.update(id, updateProductDto, user, newImages);
+    } catch (error) {
+      console.error('Error parsing JSON:', error);
+      // Xử lý lỗi nếu cần
+    }
   }
+
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('top-selling')

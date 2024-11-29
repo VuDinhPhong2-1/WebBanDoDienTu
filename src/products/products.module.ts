@@ -13,6 +13,11 @@ import { ProductCategories } from '../entities/ProductCategories';
 import { ProductImagesService } from '../product-images/product-images.service';
 import { ProductImages } from '../entities/ProductImages';
 import { Brands } from '../entities/Brands';
+import { CategoriesService } from '../categories/categories.service';
+import { TempImagesService } from '../temp-images/temp-images.service';
+import { TempImages } from '../entities/TempImages';
+import { UploadService } from '../upload/upload.service';
+import { CloudinaryService } from '../upload/cloudinary.config';
 
 @Module({
   imports: [
@@ -23,12 +28,21 @@ import { Brands } from '../entities/Brands';
       ProductCategories,
       Categories,
       ProductImages,
-      Brands
+      Brands,
+      TempImages
     ]),
     forwardRef(() => UsersModule),
     SalePricesModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, SalePricesService, ProductImagesService],
+  providers: [
+    ProductsService,
+    SalePricesService,
+    ProductImagesService,
+    CategoriesService,
+    TempImagesService,
+    UploadService,
+    CloudinaryService
+  ],
 })
 export class ProductsModule {}

@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -27,7 +28,6 @@ export class OrdersController {
     private readonly paymentMethodsService: PaymentMethodsService,
   ) {}
 
-
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('latest')
@@ -45,9 +45,17 @@ export class OrdersController {
   @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  async findAll(
+    @Query('page') page: string,
+    @Query('orderId') orderId?: string,
+  ) {
+    console.log('true');
+    const numericPage = Number(page) || 1;
+    const numericOrderId = orderId ? Number(orderId) : undefined;
+
+    return this.ordersService.findAll(numericPage, numericOrderId);
   }
+
   @UseGuards(JwtAuthGuard)
   @Get('user-orders')
   findAllByUser(@Request() req) {
