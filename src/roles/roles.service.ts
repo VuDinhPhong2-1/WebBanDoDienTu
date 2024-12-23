@@ -31,8 +31,33 @@ export class RolesService {
     }
   }
 
-  async findAll(): Promise<Roles[]> {
-    return await this.rolesRepository.find();
+  async findAll(page: number = 1, roleName: string = '') {
+    const limit = 10; // Số vai trò trên mỗi trang
+    const offset = (page - 1) * limit; // Tính vị trí bắt đầu (offset)
+
+    // Tạo query builder
+    const queryBuilder = this.rolesRepository.createQueryBuilder('role');
+
+    // Lọc theo roleName nếu có
+    if (roleName) {
+      queryBuilder.where('role.name LIKE :roleName', {
+        roleName: `%${roleName}%`,
+      });
+    }
+
+    // Phân trang
+    queryBuilder.skip(offset).take(limit);
+
+    // Lấy dữ liệu và tổng số vai trò
+    const [roles, total] = await queryBuilder.getManyAndCount();
+
+    // Trả về kết quả với thông tin phân trang
+    return {
+      result: roles,
+      total, // Tổng số vai trò
+      currentPage: page, // Trang hiện tại
+      totalPages: Math.ceil(total / limit), // Tổng số trang
+    };
   }
 
   async findOne(id: number): Promise<Roles> {

@@ -14,25 +14,31 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.CALLBACK_URL,
-      scope: ['email', 'profile'],
-      passReqToCallback: true, // Thêm dòng này
+      scope: ['profile', 'email'],
+      passReqToCallback: true,
+      prompt: 'select_account',
     });
   }
 
+  authorizationParams(option: any) {
+    return Object.assign(option, {
+      prompt: 'select_account',
+    });
+  }
   async validate(
-    req: Request, // Thêm đối số Request
+    req: Request,
     accessToken: string,
     refreshToken: string,
     profile: Profile,
   ) {
-    const response = req.res; // Lấy đối tượng Response từ Request
+    const response = req.res;
     const user = await this.authsService.validateGoogleOAuthUser(
       {
         email: profile.emails[0].value,
         displayName: profile.displayName,
         profilePicture: profile.photos[0].value,
       },
-      response, // Truyền Response vào service
+      response,
     );
     return user || null;
   }

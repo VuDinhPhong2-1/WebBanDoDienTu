@@ -42,7 +42,7 @@ import { CleanupModule } from './cleanup/cleanup.module';
         autoLoadEntities: true,
         synchronize: false,
         options: {
-          encrypt: true,
+          encrypt: false,
           trustServerCertificate: true,
           enableArithAbort: true,
         },

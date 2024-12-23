@@ -67,7 +67,7 @@ export class UsersService {
       fullName,
       passwordHash: hashedPassword,
       email,
-      phone, 
+      phone,
     });
 
     const savedUser = await this.usersRepository.save(newUser);
@@ -80,49 +80,41 @@ export class UsersService {
     return savedUser;
   }
 
-  async findAll(
-    filterDto: GetUsersFilterDto,
-  ): Promise<{ data: Users[]; total: number }> {
-    const { username, email, page = 1, limit = 10 } = filterDto;
+  async findAll(page: number, userName?: string) {
+    const itemsPerPage = 10;
+    const skip = (page - 1) * itemsPerPage;
 
-    // Create a query builder to construct the query with pagination and filtering
-    const query = this.usersRepository.createQueryBuilder('user');
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
 
-    // Select only the specific fields you want to return
-    query.select([
-      'user.userId',
-      'user.username',
-      'user.email',
-      'user.phone',
-      'user.fullName',
-      'user.isActive',
-      'user.dateOfBirth',
-      'user.createdBy',
-      'user.updatedBy',
-    ]);
-
-    // If a username is provided, add a filtering condition
-    if (username) {
-      query.andWhere('user.username LIKE :username', {
-        username: `%${username}%`,
+    if (userName) {
+      queryBuilder.where('user.fullName LIKE :userName', {
+        userName: `%${userName}%`,
       });
     }
 
-    // If an email is provided, add a filtering condition
-    if (email) {
-      query.andWhere('user.email LIKE :email', { email: `%${email}%` });
-    }
+    const [users, total] = await queryBuilder
+      .skip(skip)
+      .take(itemsPerPage)
+      .getManyAndCount();
 
-    // Get the total count of results that match the filters
-    const total = await query.getCount();
+    // Map through each user to get their roles
+    const usersWithRoles = await Promise.all(
+      users.map(async (user) => {
+        const roles = await this.getUserRoles(user.userId);
+        return {
+          ...user,
+          roles,
+        };
+      }),
+    );
 
-    // Add pagination
-    query.skip((page - 1) * limit).take(limit);
-
-    // Execute the query
-    const data = await query.getMany();
-
-    return { data, total };
+    return {
+      usersWithRoles,
+      total,
+      currentPage: page,
+      totalPages: Math.ceil(total / itemsPerPage),
+      itemsPerPage,
+    };
   }
 
   // Find user by ID
@@ -182,14 +174,31 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({
         where: { userId: id },
+        select: [
+          'userId',
+          'username',
+          'email',
+          'phone',
+          'fullName',
+          'isActive',
+          'dateOfBirth',
+          'createdBy',
+          'updatedBy',
+          'createdAt',
+          'updatedAt',
+          'profilePicture',
+        ],
       });
-      if (!user) new NotFoundException('Không tồn tại user');
+
+      if (!user) throw new NotFoundException('Không tồn tại user');
+
       const roles = await this.getUserRoles(user.userId);
       return { user, roles };
     } catch (error) {
       throw new Error(`Failed to find user: ${error.message}`);
     }
   }
+
   // Update user's refresh token
   async updateUserRefreshToken(refreshToken: string, userId: number) {
     try {
@@ -210,7 +219,6 @@ export class UsersService {
     });
   }
   async getUserRoles(userId: number): Promise<Partial<Roles>[]> {
-    // Query UserRoles and Roles tables without using relationships
     const userRoles = await this.userRolesRepository
       .createQueryBuilder('userRoles')
       .innerJoin('Roles', 'role', 'userRoles.roleId = role.roleId')
@@ -236,5 +244,126 @@ export class UsersService {
 
   async saveGoogleUser(user: Users): Promise<Users> {
     return await this.usersRepository.save(user);
+  }
+
+  async updateUserRoles(userId: number, roleIds: number[], adminId: number) {
+    try {
+      // Check if user exists
+      const user = await this.findOne(userId);
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Validate all roleIds exist
+      for (const roleId of roleIds) {
+        const role = await this.rolesService.findOne(roleId);
+        if (!role) {
+          throw new BadRequestException(`Role with ID ${roleId} not found`);
+        }
+      }
+
+      // Get the current roles of the user
+      const currentRoles = await this.getUserRoles(userId);
+      const currentRoleIds = currentRoles.map((role) => role.roleId);
+
+      // Check if there are any role IDs to remove
+      const rolesToRemove = currentRoleIds.filter(
+        (roleId) => !roleIds.includes(roleId),
+      );
+      const rolesToAdd = roleIds.filter(
+        (roleId) => !currentRoleIds.includes(roleId),
+      );
+
+      // Begin transaction
+      await this.userRolesRepository.manager.transaction(
+        async (transactionalEntityManager) => {
+          // If there are roles to remove, delete them
+          if (rolesToRemove.length > 0) {
+            await transactionalEntityManager
+              .createQueryBuilder()
+              .delete()
+              .from(UserRoles)
+              .where('userId = :userId AND roleId IN (:...roleIds)', {
+                userId,
+                roleIds: rolesToRemove,
+              })
+              .execute();
+          }
+
+          // If there are roles to add, add them
+          for (const roleId of rolesToAdd) {
+            const userRole = new UserRoles();
+            userRole.userId = userId;
+            userRole.roleId = roleId;
+            userRole.createdBy = adminId;
+            userRole.updatedBy = adminId;
+            await transactionalEntityManager.save(UserRoles, userRole);
+          }
+        },
+      );
+
+      // Get updated roles
+      const updatedRoles = await this.getUserRoles(userId);
+
+      return {
+        message: 'User roles updated successfully',
+        userId,
+        roles: updatedRoles,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new Error(`Failed to update user roles: ${error.message}`);
+    }
+  }
+
+  async assignRolesToUser(userId: number, roleIds: number[], adminId: number) {
+    try {
+      const user = await this.findOne(userId);
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      // Validate all roleIds exist
+      for (const roleId of roleIds) {
+        const role = await this.rolesService.findOne(roleId);
+        if (!role) {
+          throw new BadRequestException(`Role with ID ${roleId} not found`);
+        }
+      }
+
+      // Create new user roles
+      const newUserRoles = await Promise.all(
+        roleIds.map(async (roleId) => {
+          const userRole = new UserRoles();
+          userRole.userId = userId;
+          userRole.roleId = roleId;
+          userRole.createdBy = adminId;
+          userRole.updatedBy = adminId;
+          return await this.userRolesRepository.save(userRole);
+        }),
+      );
+
+      // Get updated roles
+      const updatedRoles = await this.getUserRoles(userId);
+
+      return {
+        message: 'Roles assigned to user successfully',
+        userId,
+        roles: updatedRoles,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new Error(`Failed to assign roles to user: ${error.message}`);
+    }
   }
 }

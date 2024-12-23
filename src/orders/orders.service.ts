@@ -217,12 +217,20 @@ export class OrdersService {
     updateOrderDto: UpdateOrderDto,
     user: Users,
   ): Promise<Orders> {
-    const order = await this.findOne(id);
+    // Tìm đơn hàng theo id
+    const order = await this.ordersRepository.findOneBy({ orderId: id });
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // Merge dữ liệu mới vào đơn hàng hiện tại (tại đây, chỉ cập nhật những trường có trong updateOrderDto)
     this.ordersRepository.merge(order, {
       ...updateOrderDto,
       updatedBy: user.userId,
       updatedAt: new Date(),
     });
+
+    // Lưu lại thay đổi
     return await this.ordersRepository.save(order);
   }
 
@@ -263,6 +271,19 @@ export class OrdersService {
     }
 
     order.paymentStatus = status;
+    await this.ordersRepository.save(order);
+  }
+
+  async updateOrderAddress(
+    orderId: number,
+    shippingAddress: string,
+  ): Promise<void> {
+    const order = await this.findOne(orderId);
+    if (!order) {
+      throw new NotFoundException(`Đơn hàng với ID ${orderId} không tồn tại`);
+    }
+
+    order.shippingAddress = shippingAddress;
     await this.ordersRepository.save(order);
   }
   async findLatestOrders(limit: number = 10): Promise<any[]> {

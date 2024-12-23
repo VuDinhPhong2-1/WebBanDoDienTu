@@ -48,7 +48,10 @@ export class AuthsController {
       throw new BadRequestException('No refresh token found');
     }
 
-    const test = await this.authsService.processNewToken(refresh_token, response);
+    const test = await this.authsService.processNewToken(
+      refresh_token,
+      response,
+    );
     console.log(test);
 
     return test;
@@ -62,7 +65,6 @@ export class AuthsController {
   ) {
     const refresh_token = request.cookies['refresh_token'];
     if (!refresh_token) {
-      console.log(refresh_token);
       throw new BadRequestException('No refresh token found');
     }
 
@@ -71,10 +73,23 @@ export class AuthsController {
       await this.authsService.deleteCookieAndToken(decoded['userId']);
       this.authsService.clearRefreshTokenCookie(response);
 
+      // Xóa cookies liên quan đến phiên đăng nhập
       response.clearCookie('access_token');
       response.clearCookie('user');
 
-      return { message: 'Logged out successfully' };
+      // Đảm bảo rằng phiên đăng nhập cũng bị xóa khỏi passport
+      request.logout((err) => {
+        if (err) {
+          console.error('Logout error: ', err);
+          throw new BadRequestException('Logout failed');
+        }
+      });
+
+      return {
+        message: 'Logged out successfully',
+        logoutUrl:
+          'https://accounts.google.com/Logout?continue=https://your-app.com', // Thêm URL để quay lại app của bạn
+      };
     } else {
       throw new BadRequestException('Invalid refresh token');
     }
